@@ -5,7 +5,14 @@ You can edit this file as you like.
 { name =
     "my-project"
 , dependencies =
-    [ "console", "effect", "makkori", "node-http", "psci-support" ]
+    [ "argonaut"
+    , "console"
+    , "effect"
+    , "foreign-object"
+    , "makkori"
+    , "node-http"
+    , "psci-support"
+    ]
 , packages =
     ./packages.dhall
 , sources =
