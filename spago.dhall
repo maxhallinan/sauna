@@ -5,7 +5,7 @@ You can edit this file as you like.
 { name =
     "my-project"
 , dependencies =
-    [ "effect", "console", "psci-support" ]
+    [ "console", "effect", "makkori", "node-http", "psci-support" ]
 , packages =
     ./packages.dhall
 , sources =
