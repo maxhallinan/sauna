@@ -3,20 +3,48 @@ module Main where
 import Prelude
 
 import Effect (Effect)
+import Effect.Class (liftEffect)
+import Effect.Aff (Aff, launchAff_, catchError)
 import Effect.Console (log)
+import Effect.Exception (catchException)
+import Foreign as F
 import Makkori (App, Middleware, Request, Response)
 import Makkori as M
 import Node.HTTP (Server)
 import Route.Account as Route.Account
+import SQLite3 (newDB, queryDB)
+
+dropTable = """
+DROP TABLE accounts;
+"""
+
+createTable = """
+CREATE TABLE IF NOT EXISTS accounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE
+);
+"""
+
+insertAccount = """
+INSERT INTO accounts (username) VALUES (?)
+"""
 
 main :: Effect Unit
-main = do
-  app <- M.makeApp
-  server <- startServer 3000 app
-  json <- jsonMiddleware
-  M.use (M.Path "/") json app
-  post "/api/v1/accounts" Route.Account.handlePost app
-  get "/api/v1/accounts/:id" Route.Account.handleGet app
+main = launchAff_ (catchError foo (\e -> do
+  _ <- liftEffect (log $ show e)
+  pure unit))
+
+foo :: Aff Unit
+foo = do
+  db <- newDB "./data"
+  _ <- queryDB db createTable []
+  liftEffect $ do
+    app <- M.makeApp
+    server <- startServer 3000 app
+    json <- jsonMiddleware
+    M.use (M.Path "/") json app
+    post "/api/v1/accounts" (Route.Account.handlePost db) app
+    get "/api/v1/accounts/:name" (Route.Account.handleGet db) app
 
 startServer :: Int -> App -> Effect Server
 startServer port app = M.listen (M.Port port) cb app

@@ -11,6 +11,7 @@ You can edit this file as you like.
     , "foreign-object"
     , "makkori"
     , "node-http"
+    , "node-sqlite3"
     , "psci-support"
     ]
 , packages =
