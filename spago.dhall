@@ -8,6 +8,7 @@ You can edit this file as you like.
     [ "argonaut"
     , "console"
     , "debug"
+    , "dotenv"
     , "effect"
     , "foreign-object"
     , "makkori"

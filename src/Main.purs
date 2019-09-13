@@ -2,6 +2,7 @@ module Main where
 
 import Prelude
 
+import Config (Config, loadConfig)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Aff (Aff, launchAff_, catchError)
@@ -30,18 +31,13 @@ insertAccount = """
 INSERT INTO accounts (username) VALUES (?)
 """
 
-main :: Effect Unit
-main = launchAff_ (catchError foo (\e -> do
-  _ <- liftEffect (log $ show e)
-  pure unit))
-
-foo :: Aff Unit
-foo = do
-  db <- newDB "./data"
+runServer :: Config -> Aff Unit
+runServer config = do
+  db <- newDB config.dbFilename
   _ <- queryDB db createTable []
   liftEffect $ do
     app <- M.makeApp
-    server <- startServer 3000 app
+    server <- startServer config.port app
     json <- jsonMiddleware
     M.use (M.Path "/") json app
     get "/.well-known/webfinger" (Route.WebFinger.handleGet db) app
@@ -60,3 +56,6 @@ get path handler app = M.get (M.Path path) (M.makeHandler handler) app
 
 post :: String -> (Request -> Response -> Effect Unit) -> App -> Effect Unit
 post path handler app = M.post (M.Path path) (M.makeHandler handler) app
+
+main :: Effect Unit
+main = launchAff_ $ loadConfig >>= runServer
