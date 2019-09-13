@@ -65,4 +65,30 @@ getNameParam = map getName <<< M.getParams
   where getName = runExcept <<< (F.readString <=< F.I.readProp "name")
 
 handlePost :: DBConnection -> Request -> Response -> Effect Unit
-handlePost db req res = notFound res
+handlePost db req res = launchAff_ $ do
+  postBody <- liftEffect $ getPostBody req
+  case postBody of
+    Left err ->
+      liftEffect $ unknownError res
+    Right b -> do
+      let params = [F.unsafeToForeign b.name]
+      _ <- insert params
+      row <- map firstRow (select params)
+      let name = bind row accountName
+      let id = bind row accountId
+      case (runExcept $ lift2 account name id) of
+        Left err ->
+          liftEffect $ unknownError res
+        Right a ->
+          liftEffect $ M.sendResponse (Account.toJsonString a) res
+  where insert params = queryDB db "INSERT INTO accounts (username) VALUES (?)" params
+        select params = queryDB db "SELECT * FROM accounts WHERE accounts.username = ?" params
+        firstRow = F.I.readIndex 0
+        accountName = F.readString <=< F.I.readProp "username"
+        accountId = F.readInt <=< F.I.readProp "id"
+
+getPostBody :: Request -> Effect (Either F.MultipleErrors { name :: String })
+getPostBody req = do
+  body <- M.getBody req
+  let postData = map (\name -> {name}) $ F.I.readProp "username" body >>= F.readString
+  pure $ runExcept postData
