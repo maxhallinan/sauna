@@ -2,6 +2,7 @@ module Main where
 
 import Prelude
 
+import App (AppEnv)
 import Config (Config, loadConfig)
 import Effect (Effect)
 import Effect.Class (liftEffect)
@@ -31,18 +32,17 @@ insertAccount = """
 INSERT INTO accounts (username) VALUES (?)
 """
 
-runServer :: Config -> Aff Unit
-runServer config = do
-  db <- newDB config.dbFilename
-  _ <- queryDB db createTable []
+runServer :: AppEnv -> Aff Unit
+runServer env = do
+  _ <- queryDB env.dbConn createTable []
   liftEffect $ do
     app <- M.makeApp
-    server <- startServer config.port app
+    server <- startServer env.port app
     json <- jsonMiddleware
     M.use (M.Path "/") json app
-    get "/.well-known/webfinger" (Route.WebFinger.handleGet db) app
-    post "/api/v1/accounts" (Route.Account.handlePost db) app
-    get "/api/v1/accounts/:name" (Route.Account.handleGet db) app
+    get "/.well-known/webfinger" (Route.WebFinger.handleGet env.dbConn) app
+    post "/api/v1/accounts" (Route.Account.handlePost env.dbConn) app
+    get "/api/v1/accounts/:name" (Route.Account.handleGet env.dbConn) app
 
 startServer :: Int -> App -> Effect Server
 startServer port app = M.listen (M.Port port) cb app
@@ -57,5 +57,10 @@ get path handler app = M.get (M.Path path) (M.makeHandler handler) app
 post :: String -> (Request -> Response -> Effect Unit) -> App -> Effect Unit
 post path handler app = M.post (M.Path path) (M.makeHandler handler) app
 
+makeEnv :: Config -> Aff AppEnv
+makeEnv { dbFilename, port } = do
+  dbConn <- newDB dbFilename  
+  pure $ { dbConn, port }
+
 main :: Effect Unit
-main = launchAff_ $ loadConfig >>= runServer
+main = launchAff_ $ loadConfig >>= makeEnv >>= runServer
