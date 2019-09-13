@@ -12,6 +12,7 @@ import Makkori (App, Middleware, Request, Response)
 import Makkori as M
 import Node.HTTP (Server)
 import Route.Account as Route.Account
+import Route.WebFinger as Route.WebFinger
 import SQLite3 (newDB, queryDB)
 
 dropTable = """
@@ -43,6 +44,7 @@ foo = do
     server <- startServer 3000 app
     json <- jsonMiddleware
     M.use (M.Path "/") json app
+    get "/.well-known/webfinger" (Route.WebFinger.handleGet db) app
     post "/api/v1/accounts" (Route.Account.handlePost db) app
     get "/api/v1/accounts/:name" (Route.Account.handleGet db) app
 
