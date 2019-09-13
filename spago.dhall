@@ -7,6 +7,7 @@ You can edit this file as you like.
 , dependencies =
     [ "argonaut"
     , "console"
+    , "debug"
     , "effect"
     , "foreign-object"
     , "makkori"
