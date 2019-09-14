@@ -4,7 +4,7 @@ import Prelude
 
 import SQLite3 (DBConnection, queryDB)
 
-type Env (m :: Type -> Type) = 
+type Env = 
   { dbConn :: DBConnection 
   , port :: Int
   }

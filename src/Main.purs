@@ -2,7 +2,7 @@ module Main where
 
 import Prelude
 
-import App (AppEnv)
+import App (Env)
 import Config (Config, loadConfig)
 import Effect (Effect)
 import Effect.Class (liftEffect)
@@ -15,6 +15,7 @@ import Makkori as M
 import Node.HTTP (Server)
 import Route.Account as Route.Account
 import Route.WebFinger as Route.WebFinger
+import Server (runServer)
 import SQLite3 (newDB, queryDB)
 
 dropTable = """
@@ -32,34 +33,9 @@ insertAccount = """
 INSERT INTO accounts (username) VALUES (?)
 """
 
-runServer :: AppEnv -> Aff Unit
-runServer env = do
-  _ <- queryDB env.dbConn createTable []
-  liftEffect $ do
-    app <- M.makeApp
-    server <- startServer env.port app
-    json <- jsonMiddleware
-    M.use (M.Path "/") json app
-    get "/.well-known/webfinger" (Route.WebFinger.handleGet env.dbConn) app
-    post "/api/v1/accounts" (Route.Account.handlePost env.dbConn) app
-    get "/api/v1/accounts/:name" (Route.Account.handleGet env.dbConn) app
-
-startServer :: Int -> App -> Effect Server
-startServer port app = M.listen (M.Port port) cb app
-  where cb = log $ "Listening on 0.0.0.0:" <> show port
-
-jsonMiddleware :: Effect Middleware
-jsonMiddleware = M.makeJSONMiddleware {}
-
-get :: String -> (Request -> Response -> Effect Unit) -> App -> Effect Unit
-get path handler app = M.get (M.Path path) (M.makeHandler handler) app
-
-post :: String -> (Request -> Response -> Effect Unit) -> App -> Effect Unit
-post path handler app = M.post (M.Path path) (M.makeHandler handler) app
-
-makeEnv :: Config -> Aff AppEnv
+makeEnv :: Config -> Aff Env
 makeEnv { dbFilename, port } = do
-  dbConn <- newDB dbFilename  
+  dbConn <- newDB dbFilename
   pure $ { dbConn, port }
 
 main :: Effect Unit
