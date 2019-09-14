@@ -1,19 +1,15 @@
-module Route.Account (handleGet, handlePost) where
+module Handler.Account (handleGet, handlePost) where
 
 import Prelude
 
 import Control.Apply (lift2)
-import Control.Bind ((<=<))
 import Control.Monad.Except (runExcept)
 import Data.Account (Account(..))
 import Data.Account as Account
-import Data.Argonaut as Ar
-import Data.Either (Either (..), hush)
-import Data.Maybe (Maybe(..))
+import Data.Either (Either (..))
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Effect.Console (log)
-import Effect.Aff (Aff, launchAff, launchAff_)
+import Effect.Aff (Aff, launchAff_)
 import Foreign as F
 import Foreign.Index as F.I
 import Makkori (Request, Response)
@@ -30,8 +26,8 @@ handleGet db req res = launchAff_ do
     Left _ ->
       liftEffect $ unknownError res
     Right n -> do
-      account <- getAccount n db
-      case account of
+      acct <- getAccount n db
+      case acct of
         Left err -> do
           liftEffect $ notFound res
         Right a ->
