@@ -1,6 +1,6 @@
 module Server.Core 
-  ( class Request
-  , class Response
+  ( class Input
+  , class Output
   , Method(..)
   , Path
   , Port
@@ -8,8 +8,6 @@ module Server.Core
   , fromOutput
   , toInput
   ) where
-
-import Prelude
 
 import Data.Tuple (Tuple)
 import Foreign (Foreign)
@@ -23,8 +21,8 @@ type Port = Int
 
 type Router = Makkori.Extra.Router
 
-class Request input where
+class Input input where
   toInput :: { body :: Foreign, params :: Foreign, query :: Foreign } -> input
 
-class Response output where
+class Output output where
   fromOutput :: output -> { body :: String , headers :: Array (Tuple String String), status :: Int }
