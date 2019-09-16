@@ -1,6 +1,7 @@
 module Data.WebFinger (WebFinger(..), WebFingerFields, toJsonString) where
 
 import Prelude
+
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Argonaut as A
 import Data.Tuple (Tuple(..))

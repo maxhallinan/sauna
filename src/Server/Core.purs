@@ -1,28 +1,37 @@
 module Server.Core 
-  ( class Input
-  , class Output
+  ( Handler
   , Method(..)
   , Path
   , Port
+  , Request
+  , Response
   , Router
-  , fromOutput
-  , toInput
+  , path
+  , port
   ) where
 
+import Effect.Aff (Aff)
 import Data.Tuple (Tuple)
 import Foreign (Foreign)
+import Makkori as Makkori
 import Makkori.Extra as Makkori.Extra
+
+type Handler = Request -> Aff Response
 
 data Method = Delete | Get | Post | Put
 
-type Path = String
+type Path = Makkori.Path
 
-type Port = Int
+path :: String -> Path
+path = Makkori.Path
+
+type Port = Makkori.Port
+
+port :: Int -> Port
+port = Makkori.Port
+
+type Request = { body :: Foreign, params :: Foreign, query :: Foreign }
+
+type Response = { body :: String, headers :: Array (Tuple String String), status :: Int }
 
 type Router = Makkori.Extra.Router
-
-class Input input where
-  toInput :: { body :: Foreign, params :: Foreign, query :: Foreign } -> input
-
-class Output output where
-  fromOutput :: output -> { body :: String , headers :: Array (Tuple String String), status :: Int }

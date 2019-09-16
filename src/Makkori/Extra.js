@@ -12,7 +12,7 @@ exports._useRouter = function (path, router, app) {
   app.use(path, router);
 };
 
-exports._useSubRouter = function (path, child, parent) {
+exports._useSubRouter = function (path, parent, child) {
   parent.use(path, child);
 };
 

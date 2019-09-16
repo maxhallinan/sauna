@@ -2,33 +2,38 @@ module App
   ( module App.Env
   , AppT(..)
   , App
-  , AppErr(..)
+  , Err(..)
+  , ErrName(..)
   , runApp
   ) where
 
 import Prelude
 
 import App.Env (Env)
-import Effect.Aff (Aff)
 import Control.Monad.Except.Trans (ExceptT, runExceptT)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.Reader.Trans (ReaderT, runReaderT)
 import Data.Either (Either)
-import Data.Newtype (class Newtype)
+import Data.Maybe (Maybe)
+import Effect.Aff (Aff)
 
-type App a = AppT AppErr Aff a
+type App a = AppT Aff a
 
-data AppErr = NotFound
+newtype Err = Err { name :: ErrName, msg :: Maybe String }
 
-newtype AppT e m a = AppT (ExceptT e (ReaderT Env m) a)
-derive newtype instance functorAppT :: Functor m => Functor (AppT e m)
-derive newtype instance applyAppT :: Monad m => Apply (AppT e m)
-derive newtype instance applicativeAppT :: Monad m => Applicative (AppT e m)
-derive newtype instance monadErrorAppT :: Monad m => MonadError e (AppT e m)
-derive newtype instance monadThrowAppT :: Monad m => MonadThrow e (AppT e m)
+data ErrName = NotFound | BadRequest
 
-runApp :: forall a. Env -> App a -> Aff (Either AppErr a)
+newtype AppT m a = AppT (ExceptT Err (ReaderT Env m) a)
+derive newtype instance functorAppT :: Functor m => Functor (AppT m)
+derive newtype instance applyAppT :: Monad m => Apply (AppT m)
+derive newtype instance applicativeAppT :: Monad m => Applicative (AppT m)
+derive newtype instance bindAppT :: Monad m => Bind (AppT m)
+derive newtype instance monadAppT :: Monad m => Monad (AppT m)
+derive newtype instance monadErrorAppT :: Monad m => MonadError Err (AppT m)
+derive newtype instance monadThrowAppT :: Monad m => MonadThrow Err (AppT m)
+
+runApp :: forall a. Env -> App a -> Aff (Either Err a)
 runApp = runAppT
 
-runAppT :: forall e m a. Env -> AppT e m a -> m (Either e a)
+runAppT :: forall m a. Env -> AppT m a -> m (Either Err a)
 runAppT env (AppT e) = runReaderT (runExceptT e) env

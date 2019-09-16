@@ -6,9 +6,10 @@ import App (Env)
 import Config (Config, loadConfig)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
-import Server as Server
+import Server (port) 
+import Server as S
 import SQLite3 (newDB)
-import Router as Router
+import Router as R
 
 makeEnv :: Config -> Aff Env
 makeEnv { dbFilename, port } = do
@@ -17,8 +18,8 @@ makeEnv { dbFilename, port } = do
 
 runServer :: Env -> Aff Unit
 runServer env = do 
-  router <- Router.makeRouter env
-  Server.runServer env.port router
+  router <- R.makeRouter env
+  S.runServer (port env.port) router
 
 main :: Effect Unit
 main = launchAff_ $ loadConfig >>= makeEnv >>= runServer

@@ -1,4 +1,4 @@
-module Server.Router 
+module Server.Router
   ( makeRouter
   , registerRoute
   , useSubRouter
@@ -10,77 +10,47 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
-import Server.Core (class Input, class Output, Method(..), Path, Router, toInput, fromOutput)
+import Server.Core (Handler, Method(..), Path, Request, Response, Router)
 import Effect.Aff (Aff, launchAff_)
-import Makkori (Request, Response)
 import Makkori as M
-import Makkori.Extra as ME
+import Makkori.Extra as M.E
 
 makeRouter :: Effect Router
-makeRouter = ME.makeRouter
+makeRouter = M.E.makeRouter
 
-useSubRouter :: String -> Router -> Router -> Effect Unit
-useSubRouter = ME.useSubRouter <<< M.Path
+useSubRouter :: Path -> Router -> Router -> Effect Unit
+useSubRouter = M.E.useSubRouter
 
-registerRoute 
-  :: forall i o
-   . Input i 
-  => Output o 
-  => Method
-  -> Path
-  -> (i -> Aff o)
-  -> Router
-  -> Effect Unit
+registerRoute :: Method -> Path -> Handler -> Router -> Effect Unit
 registerRoute method path handler router =
-  let
-    register r = r (M.Path path) (makeHandler handler) router
-  in
   case method of
     Delete ->
-      register ME.delete
+      registerWith M.E.delete
     Get ->
-      register ME.get
+      registerWith M.E.get
     Post ->
-      register ME.post
+      registerWith M.E.post
     Put ->
-      register ME.put
+      registerWith M.E.put
+  where registerWith r = r path (makeHandler handler) router
 
-makeHandler
-  :: forall i o
-   . Input i
-  => Output o
-  => (i -> Aff o)
-  -> M.Handler
-makeHandler handler = M.makeHandler h
-  where h :: Request -> Response -> Effect Unit
-        h req res = launchAff_ do
-          input <- getRequest req
-          output <- handler input
-          sendResponse output res
+makeHandler :: Handler -> M.Handler
+makeHandler handler = M.makeHandler wrapped
+  where wrapped req res =
+          launchAff_ $
+            getRequest req
+            >>= handler
+            >>= sendResponse res
 
-getRequest :: forall i. Input i => Request -> Aff i
+getRequest :: M.Request -> Aff Request
 getRequest req = liftEffect $ do
   body <- M.getBody req
   params <- M.getParams req
-  query <- ME.getQuery req
-  pure $ toInput { body, params, query }
+  query <- M.E.getQuery req
+  pure { body, params, query }
 
-sendResponse :: forall o. Output o => o -> M.Response -> Aff Unit
-sendResponse output res = liftEffect $ do
-  setStatus r.status
-  setHeaders r.headers
-  setBody r.body
-  where r :: { body :: String , headers :: Array (Tuple String String), status :: Int }
-        r = fromOutput output
-
-        setHeaders :: Array (Tuple String String) -> Effect Unit
-        setHeaders = void <<< traverse setHeader
-
-        setHeader :: Tuple String String -> Effect Unit
-        setHeader (Tuple k v) = M.setHeader k v res
-
-        setStatus :: Int -> Effect Unit
-        setStatus = flip M.setStatus res
-
-        setBody :: String -> Effect Unit
-        setBody = flip M.sendResponse res
+sendResponse :: M.Response -> Response -> Aff Unit
+sendResponse res { body, headers, status } = liftEffect $ do
+  M.setStatus status res
+  _ <- traverse (\(Tuple k v) -> M.setHeader k v res) headers
+  M.sendResponse body res
