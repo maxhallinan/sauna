@@ -1,46 +1,53 @@
-module Handler.WebFinger.Get (handleGet) where
+module Handler.WebFinger.Get (handler) where
 
 import Prelude
 
-import App (App, Err(..), ErrName(..), Env)
+import App (App, Env, badRequest)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Error.Class (throwError)
 import Data.Either (Either, either)
-import Data.Maybe (Maybe(..))
 import Data.WebFinger (WebFinger(..), toJsonString)
+import Effect.Aff (Aff)
 import Foreign as F
 import Foreign.Index as F.I
-{-- import SQLite3 (DBConnection, queryDB) --}
-import Effect.Aff (Aff)
-import Server (Request, Response)
 import Handler (class Input, class Output, runHandler)
-
-handleGet :: Env -> Request -> Aff Response
-handleGet env = runHandler env handler
-  where handler = wrapOut <<< either handleBadReq handleGetReq <<< _.resource <<< unwrapIn
-        unwrapIn (In i) = i
-        wrapOut = map Out
-
-handleBadReq :: F.MultipleErrors -> App WebFinger
-handleBadReq _ = throwError $ Err { name: BadRequest, msg: Just "Missing `resource` query parameter." }
-
-handleGetReq :: String -> App WebFinger
-handleGetReq r = pure $ WebFinger { subject: r }
+import Server (Request, Response)
 
 newtype In = In { resource :: Either F.MultipleErrors String }
 
 instance inputIn :: Input In where
-  fromRequest { query } =
-    In { resource: runExcept $ F.I.readProp "resource" query >>= F.readString }
+  fromRequest = requestToIn
+
+requestToIn :: Request -> In
+requestToIn { query } = In { resource: resourceParam query }
+  where resourceParam = runExcept <<< (F.readString <=< F.I.readProp "resource")
 
 newtype Out = Out WebFinger
 
 instance outputOut :: Output Out where
-  toResponse (Out webFinger) =
-    { body: toJsonString webFinger
-    , headers: []
-    , status: 200
-    }
+  toResponse = outToResponse
+
+outToResponse :: Out -> Response
+outToResponse (Out webFinger) =
+  { body: toJsonString webFinger
+  , headers: []
+  , status: 200
+  }
+
+handler :: Env -> Request -> Aff Response
+handler env = runHandler env $ 
+  unwrapIn
+  >>> _.resource
+  >>> either handleBadReq handleGoodReq
+  >>> wrapOut
+  where unwrapIn (In i) = i
+        wrapOut = map Out
+
+handleBadReq :: F.MultipleErrors -> App WebFinger
+handleBadReq _ = throwError (badRequest "Missing `resource` query parameter.")
+
+handleGoodReq :: String -> App WebFinger
+handleGoodReq r = pure $ WebFinger { subject: r }
 
 {-- handleGet :: DBConnection -> Request -> Response -> Effect Unit --}
 {-- handleGet db req res = launchAff_ do --}
@@ -60,4 +67,3 @@ instance outputOut :: Output Out where
 {--   where resourceParam = F.readString <=< F.I.readProp "resource" --}
 {--         firstRow = F.I.readIndex 0 --}
 {--         accountName = F.readString <=< F.I.readProp "username" --}
-

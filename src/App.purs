@@ -1,27 +1,22 @@
 module App 
   ( module App.Env
+  , module App.Err
   , AppT(..)
   , App
-  , Err(..)
-  , ErrName(..)
   , runApp
   ) where
 
 import Prelude
 
 import App.Env (Env)
+import App.Err (Err(..), ErrName(..), err, badRequest, badRequest_)
 import Control.Monad.Except.Trans (ExceptT, runExceptT)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.Reader.Trans (ReaderT, runReaderT)
 import Data.Either (Either)
-import Data.Maybe (Maybe)
 import Effect.Aff (Aff)
 
 type App a = AppT Aff a
-
-newtype Err = Err { name :: ErrName, msg :: Maybe String }
-
-data ErrName = NotFound | BadRequest
 
 newtype AppT m a = AppT (ExceptT Err (ReaderT Env m) a)
 derive newtype instance functorAppT :: Functor m => Functor (AppT m)

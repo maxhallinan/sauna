@@ -6,4 +6,4 @@ import Handler.WebFinger.Get as WebFinger.Get
 import Server (Request, Response)
 
 handleGet :: Env -> Request -> Aff Response
-handleGet = WebFinger.Get.handleGet
+handleGet = WebFinger.Get.handler
