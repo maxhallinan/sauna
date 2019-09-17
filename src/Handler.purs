@@ -10,7 +10,7 @@ module Handler
 import Prelude
 
 import App (App, Env, Err(..), ErrName(..), runApp)
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Maybe (maybe)
 import Effect.Aff (Aff)
 import Server (Request, Response)
@@ -30,15 +30,12 @@ runHandler
   => Env 
   -> (i -> App o) 
   -> (Request -> Aff Response)
-runHandler env handler req = do
-  r <- runApp env app
-  case r of
-    Left err -> 
-      pure $ toErrResponse err
-    Right output -> 
-      pure $ toResponse output
-  where input = fromRequest req
-        app = handler input
+runHandler env handler = 
+  fromRequest 
+  >>> handler 
+  >>> runApp env 
+  >=> either toErrResponse toResponse 
+  >>> pure
 
 toErrResponse :: Err -> Response
 toErrResponse (Err { msg, name }) =
