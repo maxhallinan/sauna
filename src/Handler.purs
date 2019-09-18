@@ -10,7 +10,7 @@ module Handler
 import Prelude
 
 import App (App, Env, Err(..), ErrName(..), runApp)
-import Data.Either (Either(..), either)
+import Data.Either (either)
 import Data.Maybe (maybe)
 import Effect.Aff (Aff)
 import Server (Request, Response)
@@ -47,3 +47,4 @@ toErrResponse (Err { msg, name }) =
 toErrStatus :: ErrName -> Int
 toErrStatus BadRequest = 400
 toErrStatus NotFound = 404
+toErrStatus DbErr = 500

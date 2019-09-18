@@ -4,8 +4,8 @@ import Prelude
 
 import Control.Apply (lift2)
 import Control.Monad.Except (runExcept)
-import Data.Account (Account(..))
-import Data.Account as Account
+import Core.Account (Account(..))
+import Core.Account as Account
 import Data.Either (Either (..))
 import Effect (Effect)
 import Effect.Class (liftEffect)

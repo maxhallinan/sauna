@@ -1,4 +1,4 @@
-module Data.WebFinger (WebFinger(..), WebFingerFields, toJsonString) where
+module Core.WebFinger (WebFinger(..), WebFingerFields, toJsonString) where
 
 import Prelude
 

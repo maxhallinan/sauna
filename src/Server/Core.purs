@@ -2,7 +2,7 @@ module Server.Core
   ( Handler
   , Method(..)
   , Path
-  , Port
+  , Port(..)
   , Request
   , Response
   , Router
@@ -25,10 +25,10 @@ type Path = Makkori.Path
 path :: String -> Path
 path = Makkori.Path
 
-type Port = Makkori.Port
+newtype Port = Port Int
 
 port :: Int -> Port
-port = Makkori.Port
+port = Port
 
 type Request = { body :: Foreign, params :: Foreign, query :: Foreign }
 

@@ -1,4 +1,4 @@
-module Data.Account (Account(..), AccountFields, toJsonString) where
+module Core.Account (Account(..), AccountFields, toJsonString) where
 
 import Prelude
 

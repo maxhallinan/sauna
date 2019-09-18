@@ -2,25 +2,39 @@ module Handler.WebFinger.Get (handler) where
 
 import Prelude
 
-import App (App, Env, badRequest)
+import App.Env (class Has)
+import App.Err (Err)
+import SQLite3 (DBConnection)
+import App (Env, badRequest)
 import Control.Monad.Except (runExcept)
-import Control.Monad.Error.Class (throwError)
+import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
+import Control.Monad.Reader.Class (class MonadReader)
+import Core.Account (Account(..))
+import Core.WebFinger (WebFinger(..), toJsonString)
 import Data.Either (Either, either)
-import Data.WebFinger (WebFinger(..), toJsonString)
+import Db.Account (getAccountByUsername)
 import Effect.Aff (Aff)
+import Effect.Aff.Class (class MonadAff)
 import Foreign as F
 import Foreign.Index as F.I
 import Handler (class Input, class Output, runHandler)
 import Server (Request, Response)
 
-newtype In = In { resource :: Either F.MultipleErrors String }
+newtype In = In (Either F.MultipleErrors Params)
+
+type Params = { username :: String }
 
 instance inputIn :: Input In where
   fromRequest = requestToIn
 
 requestToIn :: Request -> In
-requestToIn { query } = In { resource: resourceParam query }
-  where resourceParam = runExcept <<< (F.readString <=< F.I.readProp "resource")
+requestToIn = 
+  _.query
+  >>> decodeResource
+  >>> map toParams
+  >>> In
+  where decodeResource = runExcept <<< (F.readString <=< F.I.readProp "resource")
+        toParams resource = { username: resource }
 
 newtype Out = Out WebFinger
 
@@ -35,35 +49,30 @@ outToResponse (Out webFinger) =
   }
 
 handler :: Env -> Request -> Aff Response
-handler env = runHandler env $ 
+handler env = runHandler env $
   unwrapIn
-  >>> _.resource
   >>> either handleBadReq handleGoodReq
   >>> wrapOut
   where unwrapIn (In i) = i
         wrapOut = map Out
 
-handleBadReq :: F.MultipleErrors -> App WebFinger
+handleBadReq 
+  :: forall m
+   . MonadError Err m
+  => MonadThrow Err m
+  => F.MultipleErrors 
+  -> m WebFinger
 handleBadReq _ = throwError (badRequest "Missing `resource` query parameter.")
 
-handleGoodReq :: String -> App WebFinger
-handleGoodReq r = pure $ WebFinger { subject: r }
-
-{-- handleGet :: DBConnection -> Request -> Response -> Effect Unit --}
-{-- handleGet db req res = launchAff_ do --}
-{--   query <- liftEffect $ ME.getQuery req --}
-{--   let resource = resourceParam query --}
-{--   case runExcept resource of --}
-{--     Left err -> do --}
-{--       liftEffect $ M.sendResponse (show err) res --}
-{--     Right r -> do --}
-{--       row <- map firstRow $ queryDB db "SELECT * FROM accounts WHERE accounts.username = ?" [F.unsafeToForeign r] --}
-{--       let name = bind row accountName --}
-{--       case runExcept name of --}
-{--         Left err -> do --}
-{--           liftEffect $ M.sendResponse "" res --}
-{--         Right n -> do --}
-{--           liftEffect $ M.sendResponse (toJsonString $ WebFinger {subject: n}) res --}
-{--   where resourceParam = F.readString <=< F.I.readProp "resource" --}
-{--         firstRow = F.I.readIndex 0 --}
-{--         accountName = F.readString <=< F.I.readProp "username" --}
+handleGoodReq
+  :: forall env m
+   . Has DBConnection env
+  => MonadReader env m
+  => MonadAff m
+  => MonadError Err m
+  => MonadThrow Err m
+  => Params
+  -> m WebFinger
+handleGoodReq { username } = do 
+  Account account <- getAccountByUsername username
+  pure $ WebFinger { subject: account.username }

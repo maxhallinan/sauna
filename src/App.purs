@@ -1,4 +1,4 @@
-module App 
+module App
   ( module App.Env
   , module App.Err
   , AppT(..)
@@ -8,13 +8,16 @@ module App
 
 import Prelude
 
-import App.Env (Env)
+import App.Env (Env(..))
 import App.Err (Err(..), ErrName(..), err, badRequest, badRequest_)
 import Control.Monad.Except.Trans (ExceptT, runExceptT)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
+import Control.Monad.Reader.Class (class MonadAsk, class MonadReader)
 import Control.Monad.Reader.Trans (ReaderT, runReaderT)
 import Data.Either (Either)
+import Effect.Class (class MonadEffect)
 import Effect.Aff (Aff)
+import Effect.Aff.Class (class MonadAff)
 
 type App a = AppT Aff a
 
@@ -26,6 +29,10 @@ derive newtype instance bindAppT :: Monad m => Bind (AppT m)
 derive newtype instance monadAppT :: Monad m => Monad (AppT m)
 derive newtype instance monadErrorAppT :: Monad m => MonadError Err (AppT m)
 derive newtype instance monadThrowAppT :: Monad m => MonadThrow Err (AppT m)
+derive newtype instance monadAskAppT :: Monad m => MonadAsk Env (AppT m)
+derive newtype instance monadReaderAppT :: Monad m => MonadReader Env (AppT m)
+derive newtype instance monadEffectAppT :: MonadEffect m => MonadEffect (AppT m)
+derive newtype instance monadAffAppT :: MonadAff m => MonadAff (AppT m)
 
 runApp :: forall a. Env -> App a -> Aff (Either Err a)
 runApp = runAppT
