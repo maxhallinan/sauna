@@ -1,9 +1,5 @@
-module Handler.WebFinger (handleGet) where
+module Handler.WebFinger 
+  ( module Handler.WebFinger.Get
+  ) where
 
-import App (Env)
-import Effect.Aff (Aff)
-import Handler.WebFinger.Get as WebFinger.Get
-import Server (Request, Response)
-
-handleGet :: Env -> Request -> Aff Response
-handleGet = WebFinger.Get.handler
+import Handler.WebFinger.Get (handleGet)

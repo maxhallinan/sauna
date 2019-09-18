@@ -8,8 +8,8 @@ module App.Env
 import Prelude
 
 import Control.Monad.Reader (class MonadReader, ask)
-import Server (Port(..))
-import SQLite3 (DBConnection, queryDB)
+import Server (Port)
+import SQLite3 (DBConnection)
 
 newtype Env = 
   Env { dbConn :: DBConnection 

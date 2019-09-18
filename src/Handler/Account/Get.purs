@@ -1,4 +1,4 @@
-module Handler.WebFinger.Get (handleGet) where
+module Handler.Account.Get (handleGet) where
 
 import Prelude
 
@@ -8,8 +8,8 @@ import App.Err (Err)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.Except (Except, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
-import Core.Account (Account(..))
-import Core.WebFinger (WebFinger(..))
+import Core.Account (Account)
+import Data.Newtype (class Newtype, unwrap)
 import Db.Account (getAccountByUsername)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
@@ -21,19 +21,20 @@ import Server (Request, Response)
 import SQLite3 (DBConnection)
 
 newtype Params = Params { username :: String }
+derive instance newtypeParams :: Newtype Params _
 
 instance inputParams :: Input Params where
   fromRequest = toParams
 
 toParams :: Request -> Except Err Params
 toParams req = do
-  resource <- readResource req.query
-  pure $ Params { username: resource }
+  username <- readUsername req.params
+  pure $ Params { username }
 
-readResource :: Foreign -> Except Err String
-readResource = withExcept toReadErr <<< read
-  where read = F.readString <=< F.I.readProp "resource" 
-        toReadErr = const $ badRequest "Missing `resource` query parameter."
+readUsername :: Foreign -> Except Err String
+readUsername = withExcept toReadErr <<< read
+  where read = F.readString <=< F.I.readProp "username"
+        toReadErr = const $ badRequest "Missing `username` path parameter."
 
 handleGet :: Env -> Request -> Aff Response
 handleGet env = runJsonHandler env handler
@@ -46,7 +47,8 @@ handler
   => MonadError Err m
   => MonadThrow Err m
   => Params
-  -> m WebFinger
-handler (Params { username }) = do 
-  Account account <- getAccountByUsername username
-  pure $ WebFinger { subject: account.username }
+  -> m Account
+handler =
+  unwrap
+  >>> _.username
+  >>> getAccountByUsername

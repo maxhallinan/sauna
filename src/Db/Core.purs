@@ -3,15 +3,14 @@ module Db.Core (asFirstRow, runQuery) where
 import Prelude
 
 import App.Env (class Has, grab)
-import App.Err (Err, dbErr_, notFound)
+import App.Err (Err, dbErr_)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Data.Either (either)
 import Effect.Aff.Class (class MonadAff, liftAff)
-import Foreign (Foreign, F)
+import Foreign (Foreign)
 import Foreign.Index as F.I
-import Effect.Class (class MonadEffect)
 import SQLite3 (DBConnection, queryDB)
 
 asFirstRow 

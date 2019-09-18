@@ -6,6 +6,7 @@ You can edit this file as you like.
     "my-project"
 , dependencies =
     [ "argonaut"
+    , "bifunctors"
     , "console"
     , "debug"
     , "dotenv"
