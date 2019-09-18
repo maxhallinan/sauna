@@ -36,7 +36,7 @@ readResource = withExcept toReadErr <<< read
         toReadErr = const $ badRequest "Missing `resource` query parameter."
 
 handleGet :: Env -> Request -> Aff Response
-handleGet env = runJsonHandler env handler
+handleGet env = runJsonHandler env 200 handler
 
 handler
   :: forall env m

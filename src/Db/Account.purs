@@ -1,9 +1,9 @@
-module Db.Account (getAccountByUsername) where
+module Db.Account (getAccountByUsername, insertAccount) where
 
 import Prelude
 
 import App.Env (class Has)
-import App.Err (Err, notFound)
+import App.Err (Err, dbErr)
 import Control.Apply (lift2)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
 import Control.Monad.Except (runExcept)
@@ -40,8 +40,23 @@ getAccountByUsername username = do
   rows <- runQuery query params
   firstRow <- asFirstRow rows
   let account = decodeAccount firstRow
-  either throwNotFound pure account
+  either throwDbErr pure account
   where query = "SELECT * FROM accounts WHERE accounts.username = ?"  
         params = [F.unsafeToForeign username]
         decodeAccount = decodeAccountRow >>> runExcept
-        throwNotFound = const $ throwError (notFound $ "Username not found: " <> username)
+        throwDbErr = const $ throwError $ dbErr ("Account not found: " <> username)
+
+insertAccount
+  :: forall env m
+   . Has DBConnection env
+  => MonadReader env m
+  => MonadAff m
+  => MonadError Err m
+  => MonadThrow Err m
+  => { username :: String }
+  -> m Account
+insertAccount a = do
+  x <- runQuery query params
+  getAccountByUsername a.username
+  where query = "INSERT INTO accounts (username) VALUES (?)"
+        params = [F.unsafeToForeign a.username]

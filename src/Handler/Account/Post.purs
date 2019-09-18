@@ -1,4 +1,4 @@
-module Handler.Account.Get (handleGet) where
+module Handler.Account.Post (handlePost) where
 
 import Prelude
 
@@ -9,8 +9,7 @@ import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.Except (Except, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account)
-import Data.Newtype (class Newtype, unwrap)
-import Db.Account (getAccountByUsername)
+import Db.Account (insertAccount)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
 import Foreign (Foreign)
@@ -21,23 +20,22 @@ import Server (Request, Response)
 import SQLite3 (DBConnection)
 
 newtype Params = Params { username :: String }
-derive instance newtypeParams :: Newtype Params _
 
 instance inputParams :: Input Params where
   fromRequest = toParams
 
 toParams :: Request -> Except Err Params
 toParams req = do
-  username <- readUsername req.params
+  username <- readUsername req.body
   pure $ Params { username }
 
 readUsername :: Foreign -> Except Err String
 readUsername = withExcept toReadErr <<< read
   where read = F.readString <=< F.I.readProp "username"
-        toReadErr = const $ badRequest "Missing `username` path parameter."
+        toReadErr = const $ badRequest "Missing required field `username` in the request body."
 
-handleGet :: Env -> Request -> Aff Response
-handleGet env = runJsonHandler env 200 handler
+handlePost :: Env -> Request -> Aff Response
+handlePost env = runJsonHandler env 201 handler
 
 handler
   :: forall env m
@@ -48,7 +46,4 @@ handler
   => MonadThrow Err m
   => Params
   -> m Account
-handler =
-  unwrap
-  >>> _.username
-  >>> getAccountByUsername
+handler (Params params) = insertAccount { username: params.username }

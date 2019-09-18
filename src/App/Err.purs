@@ -5,19 +5,21 @@ module App.Err
   , err_
   , badRequest
   , badRequest_
+  , conflict
+  , conflict_
   , dbErr
   , dbErr_
   , notFound
   , notFound_
+  , unknown
+  , unknown_
   ) where
 
-import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Data.Maybe (Maybe(..))
-import Data.Tuple (Tuple(..))
 
 newtype Err = Err { name :: ErrName, msg :: Maybe String }
 
-data ErrName = DbErr | NotFound | BadRequest
+data ErrName = BadRequest | Conflict | DbErr | NotFound | Unknown
 
 makeErr :: ErrName -> Maybe String -> Err
 makeErr name msg = Err { name, msg }
@@ -45,3 +47,15 @@ notFound = err NotFound
 
 notFound_ :: Err
 notFound_ = err_ NotFound
+
+conflict :: String -> Err
+conflict = err Conflict
+
+conflict_ :: Err
+conflict_ = err_ Conflict
+
+unknown :: String -> Err
+unknown = err Unknown
+
+unknown_ :: Err
+unknown_ = err_ Unknown

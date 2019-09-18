@@ -3,32 +3,34 @@ module Db.Core (asFirstRow, runQuery) where
 import Prelude
 
 import App.Env (class Has, grab)
-import App.Err (Err, dbErr_)
+import App.Err (Err, dbErr)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Data.Either (either)
+import Effect.Aff (try)
 import Effect.Aff.Class (class MonadAff, liftAff)
+import Effect.Exception (message)
 import Foreign (Foreign)
 import Foreign.Index as F.I
 import SQLite3 (DBConnection, queryDB)
 
-asFirstRow 
+asFirstRow
   :: forall env m
-   . Has DBConnection env 
+   . Has DBConnection env
   => MonadReader env m
   => MonadAff m
   => MonadError Err m
   => MonadThrow Err m
   => Foreign
   -> m Foreign
-asFirstRow = 
+asFirstRow =
   F.I.readIndex 0
   >>> runExcept
   >>> either throwDbErr pure
-  where throwDbErr = const $ throwError dbErr_
+  where throwDbErr = const $ throwError $ dbErr "Expected 1 row but got none."
 
-runQuery 
+runQuery
   :: forall env m
    . Has DBConnection env
   => MonadReader env m
@@ -40,4 +42,7 @@ runQuery
   -> m Foreign
 runQuery query params = do
   dbConn <- grab :: m DBConnection
-  liftAff $ queryDB dbConn query params
+  result <- run dbConn query params
+  either throwDbErr pure result
+  where throwDbErr = throwError <<< dbErr <<< message
+        run d q p = queryDB d q p # try # liftAff

@@ -28,14 +28,15 @@ runJsonHandler
    . Input i
   => EncodeJson o
   => Env
+  -> Int
   -> (i -> App o)
   -> (Request -> Aff Response)
-runJsonHandler env handleReq =
+runJsonHandler env successStatus handleReq =
   fromRequest
   >>> runExcept
   >>> either throwError handleReq
   >>> runApp env
-  >=> either toErrResponse toJsonResponse
+  >=> either toErrResponse (toJsonResponse successStatus)
   >>> pure
 
 toErrResponse :: Err -> Response
@@ -48,11 +49,13 @@ toErrResponse (Err { msg, name }) =
 toErrStatus :: ErrName -> Int
 toErrStatus BadRequest = 400
 toErrStatus NotFound = 404
+toErrStatus Conflict = 409
+toErrStatus Unknown = 500
 toErrStatus DbErr = 500
 
-toJsonResponse :: forall a. EncodeJson a => a -> Response
-toJsonResponse output =
+toJsonResponse :: forall a. EncodeJson a => Int -> a -> Response
+toJsonResponse status output =
   { body : A.stringify $ encodeJson output
   , headers: [Tuple "Content-Type" "application/json"]
-  , status: 200
+  , status
   }
