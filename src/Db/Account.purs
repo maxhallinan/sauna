@@ -3,16 +3,16 @@ module Db.Account (getAccountByUsername, insertAccount) where
 import Prelude
 
 import App.Env (class Has)
-import App.Err (Err, dbErr)
+import App.Err (Err)
+import App.Err as Err
 import Control.Apply (lift2)
-import Control.Monad.Error.Class (class MonadError, class MonadThrow, catchError, throwError)
+import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
-import Data.Either (Either(..), either)
+import Data.Either (either)
 import Data.Foldable (intercalate)
 import Db.Core (asFirstRow, runQuery)
-import Db.Err (DbErr(..))
 import Effect.Aff.Class (class MonadAff)
 import Foreign (Foreign, F, isUndefined)
 import Foreign as F
@@ -42,15 +42,15 @@ getAccountByUsername username = do
   rows <- runQuery query params
   firstRow <- asFirstRow rows
   if isUndefined firstRow
-  then throwRecordNotFound
+  then throwNotFound
   else do
     let account = decodeAccount firstRow
-    either throwReadErr pure account
+    either throwDbErr pure account
   where query = "SELECT * FROM accounts WHERE accounts.username = ?"  
         params = [F.unsafeToForeign username]
         decodeAccount = decodeAccountRow >>> runExcept
-        throwRecordNotFound = throwError $ dbErr RecordNotFound ("Account not found: " <> username)
-        throwReadErr err = throwError $ dbErr (ReadErr err) (intercalate " " $ map show err)
+        throwNotFound = throwError $ Err.notFound ("Account not found: " <> username)
+        throwDbErr = throwError <<< Err.dbErr <<< intercalate " " <<< map show
 
 insertAccount
   :: forall env m
@@ -62,7 +62,7 @@ insertAccount
   => { username :: String }
   -> m Account
 insertAccount a = do
-  x <- runQuery query params
+  _ <- runQuery query params
   getAccountByUsername a.username
   where query = "INSERT INTO accounts (username) VALUES (?)"
         params = [F.unsafeToForeign a.username]

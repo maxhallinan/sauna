@@ -3,7 +3,8 @@ module Handler.Account.Get (handleGet) where
 import Prelude
 
 import App.Env (class Has, Env)
-import App.Err (Err, badRequest)
+import App.Err (Err)
+import App.Err as Err
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.Except (Except, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
@@ -31,9 +32,9 @@ toParams req = do
   pure $ Params { username }
 
 readUsername :: Foreign -> Except Err String
-readUsername = withExcept toReadErr <<< read
+readUsername = withExcept toInvalidErr <<< read
   where read = F.readString <=< F.I.readProp "username"
-        toReadErr = const $ badRequest "Missing `username` path parameter."
+        toInvalidErr = const $ Err.badRequest "Missing `username` path parameter."
 
 handleGet :: Env -> Request -> Aff Response
 handleGet env = runJsonHandler env 200 handler

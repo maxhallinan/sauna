@@ -9,15 +9,13 @@ import Prelude
 
 import App (App, runApp)
 import App.Env (Env)
-import App.Err (Err(..), ErrName(..))
+import App.Err (Err(..), ErrCode(..))
 import Control.Monad.Except (Except, runExcept)
 import Control.Monad.Error.Class (throwError)
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Argonaut as A
 import Data.Either (either)
-import Data.Maybe (maybe)
 import Data.Tuple (Tuple(..))
-import Db.Err (DbErr(..))
 import Effect.Aff (Aff)
 import Server (Request, Response)
 
@@ -43,20 +41,21 @@ runJsonHandler env successStatus handleReq =
   >>> pure
 
 toErrResponse :: Err -> Response
-toErrResponse (Err { msg, name }) =
-  { body: maybe "" identity msg
+toErrResponse err =
+  { body: A.stringify $ encodeJson err
   , headers: []
-  , status: toErrStatus name
+  , status: toErrStatus err
   }
 
-toErrStatus :: ErrName -> Int
-toErrStatus BadRequest = 400
-toErrStatus (DbErr ConstraintViolation) = 409
-toErrStatus (DbErr ExpectedOneRow) = 500
-toErrStatus (DbErr RecordNotFound) = 404
-toErrStatus (DbErr (ReadErr _)) = 500
-toErrStatus (DbErr UnknownDbErr) = 500
-toErrStatus Unknown = 500
+toErrStatus :: Err -> Int
+toErrStatus (Err { code }) =
+  case code of
+       BadRequest -> 400
+       NotFound -> 404
+       Conflict -> 409
+       InvalidData -> 422
+       DbErr -> 500
+       Unknown -> 500
 
 toJsonResponse :: forall a. EncodeJson a => Int -> a -> Response
 toJsonResponse status output =

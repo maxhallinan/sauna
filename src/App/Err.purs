@@ -1,30 +1,72 @@
 module App.Err
   ( Err(..)
-  , ErrName(..)
+  , ErrCode(..)
   , err
   , badRequest
+  , conflict
   , dbErr
+  , invalidData
+  , notFound
   , unknown
   ) where
 
-import Data.Maybe (Maybe(..))
-import Db.Err (DbErr)
+import Prelude
 
-newtype Err = Err { name :: ErrName, msg :: Maybe String }
+import Data.Argonaut (class EncodeJson, encodeJson)
+import Data.Argonaut as A
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Tuple (Tuple(..))
+import Foreign.Object as O
 
-data ErrName = BadRequest | DbErr DbErr | Unknown
+newtype Err = Err { code :: ErrCode, msg :: Maybe String }
 
-makeErr :: ErrName -> Maybe String -> Err
-makeErr name msg = Err { name, msg }
+instance encodeJsonErr :: EncodeJson Err where
+  encodeJson (Err { code, msg }) = A.fromObject obj
+    where obj = O.fromFoldable [ Tuple "code" (encodeJson code)
+                               , Tuple "msg" (A.fromString $ fromMaybe "" msg)
+                               ]
 
-err :: ErrName -> String -> Err
-err name msg = makeErr name (Just msg)
+data ErrCode 
+  = BadRequest
+  | Conflict
+  | DbErr
+  | InvalidData
+  | NotFound
+  | Unknown
 
-dbErr :: DbErr -> String -> Err
-dbErr name msg = err (DbErr name) msg
+newtype FieldErr = 
+  FieldErr { code :: String
+           , field :: String
+           }
+
+instance encodeJsonErrCode :: EncodeJson ErrCode where
+  encodeJson BadRequest = A.fromString "BAD_REQUEST"
+  encodeJson Conflict = A.fromString "CONFLICT"
+  encodeJson DbErr = A.fromString "DB_ERROR"
+  encodeJson InvalidData = A.fromString "INVALID_DATA"
+  encodeJson NotFound = A.fromString "NOT_FOUND"
+  encodeJson Unknown = A.fromString "UNKNOWN"
+
+makeErr :: ErrCode -> Maybe String -> Err
+makeErr code msg = Err { code, msg }
+
+err :: ErrCode -> String -> Err
+err code msg = makeErr code (Just msg)
 
 badRequest :: String -> Err
 badRequest = err BadRequest
+
+conflict :: String -> Err
+conflict = err Conflict
+
+dbErr :: String -> Err
+dbErr = err DbErr
+
+invalidData :: String -> Err
+invalidData = err InvalidData
+
+notFound :: String -> Err
+notFound = err NotFound
 
 unknown :: String -> Err
 unknown = err Unknown

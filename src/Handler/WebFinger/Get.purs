@@ -3,7 +3,8 @@ module Handler.WebFinger.Get (handleGet) where
 import Prelude
 
 import App.Env (Env, class Has)
-import App.Err (Err, badRequest)
+import App.Err (Err)
+import App.Err as Err
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.Except (Except, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
@@ -30,9 +31,9 @@ toParams req = do
   pure $ Params { username: resource }
 
 readResource :: Foreign -> Except Err String
-readResource = withExcept toReadErr <<< read
+readResource = withExcept toInvalidErr <<< read
   where read = F.readString <=< F.I.readProp "resource" 
-        toReadErr = const $ badRequest "Missing `resource` query parameter."
+        toInvalidErr = const $ Err.badRequest "Missing `resource` query parameter."
 
 handleGet :: Env -> Request -> Aff Response
 handleGet env = runJsonHandler env 200 handler
