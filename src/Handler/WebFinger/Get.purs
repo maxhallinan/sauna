@@ -2,9 +2,8 @@ module Handler.WebFinger.Get (handleGet) where
 
 import Prelude
 
-import App (Env, badRequest)
-import App.Env (class Has)
-import App.Err (Err)
+import App.Env (Env, class Has)
+import App.Err (Err, badRequest)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.Except (Except, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)

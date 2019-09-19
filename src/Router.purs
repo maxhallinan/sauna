@@ -2,7 +2,7 @@ module Router (makeRouter) where
 
 import Prelude
 
-import App (Env)
+import App.Env (Env)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Server (Router, path, useSubRouter)

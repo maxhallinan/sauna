@@ -2,7 +2,7 @@ module Router.Account (makeRouter) where
 
 import Prelude
 
-import App (Env)
+import App.Env (Env)
 import Effect (Effect)
 import Handler.Account (handleGet, handlePost)
 import Server (Method(..), Router, path, registerRoute)

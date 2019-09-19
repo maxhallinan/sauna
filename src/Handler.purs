@@ -7,7 +7,9 @@ module Handler
 
 import Prelude
 
-import App (App, Env, Err(..), ErrName(..), runApp)
+import App (App, runApp)
+import App.Env (Env)
+import App.Err (Err(..), ErrName(..))
 import Control.Monad.Except (Except, runExcept)
 import Control.Monad.Error.Class (throwError)
 import Data.Argonaut (class EncodeJson, encodeJson)
@@ -15,6 +17,7 @@ import Data.Argonaut as A
 import Data.Either (either)
 import Data.Maybe (maybe)
 import Data.Tuple (Tuple(..))
+import Db.Err (DbErr(..))
 import Effect.Aff (Aff)
 import Server (Request, Response)
 
@@ -48,10 +51,12 @@ toErrResponse (Err { msg, name }) =
 
 toErrStatus :: ErrName -> Int
 toErrStatus BadRequest = 400
-toErrStatus NotFound = 404
-toErrStatus Conflict = 409
+toErrStatus (DbErr ConstraintViolation) = 409
+toErrStatus (DbErr ExpectedOneRow) = 500
+toErrStatus (DbErr RecordNotFound) = 404
+toErrStatus (DbErr (ReadErr _)) = 500
+toErrStatus (DbErr UnknownDbErr) = 500
 toErrStatus Unknown = 500
-toErrStatus DbErr = 500
 
 toJsonResponse :: forall a. EncodeJson a => Int -> a -> Response
 toJsonResponse status output =

@@ -2,7 +2,7 @@ module Router.WebFinger (makeRouter) where
 
 import Prelude
 
-import App (Env)
+import App.Env (Env)
 import Effect (Effect)
 import Handler.WebFinger (handleGet)
 import Server (Method(..), Router, path, registerRoute)

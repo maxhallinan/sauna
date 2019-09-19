@@ -5,14 +5,16 @@ import Prelude
 import App.Env (class Has)
 import App.Err (Err, dbErr)
 import Control.Apply (lift2)
-import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
+import Control.Monad.Error.Class (class MonadError, class MonadThrow, catchError, throwError)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
-import Data.Either (either)
+import Data.Either (Either(..), either)
+import Data.Foldable (intercalate)
 import Db.Core (asFirstRow, runQuery)
+import Db.Err (DbErr(..))
 import Effect.Aff.Class (class MonadAff)
-import Foreign (Foreign, F)
+import Foreign (Foreign, F, isUndefined)
 import Foreign as F
 import Foreign.Index as F.I
 import SQLite3 (DBConnection)
@@ -39,12 +41,16 @@ getAccountByUsername
 getAccountByUsername username = do
   rows <- runQuery query params
   firstRow <- asFirstRow rows
-  let account = decodeAccount firstRow
-  either throwDbErr pure account
+  if isUndefined firstRow
+  then throwRecordNotFound
+  else do
+    let account = decodeAccount firstRow
+    either throwReadErr pure account
   where query = "SELECT * FROM accounts WHERE accounts.username = ?"  
         params = [F.unsafeToForeign username]
         decodeAccount = decodeAccountRow >>> runExcept
-        throwDbErr = const $ throwError $ dbErr ("Account not found: " <> username)
+        throwRecordNotFound = throwError $ dbErr RecordNotFound ("Account not found: " <> username)
+        throwReadErr err = throwError $ dbErr (ReadErr err) (intercalate " " $ map show err)
 
 insertAccount
   :: forall env m

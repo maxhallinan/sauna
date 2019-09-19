@@ -2,9 +2,8 @@ module Handler.Account.Post (handlePost) where
 
 import Prelude
 
-import App (Env, badRequest)
-import App.Env (class Has)
-import App.Err (Err)
+import App.Env (class Has, Env)
+import App.Err (Err, badRequest)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.Except (Except, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)

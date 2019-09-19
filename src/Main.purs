@@ -2,7 +2,7 @@ module Main where
 
 import Prelude
 
-import App (Env(..))
+import App.Env (Env(..))
 import Config (Config, loadConfig)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
