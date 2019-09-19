@@ -9,7 +9,7 @@ import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError
 import Control.Monad.Except (Except, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account)
-import Data.Either (Either(..))
+import Data.Either (either)
 import Db.Account (getAccountByUsername, insertAccount)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
@@ -52,8 +52,6 @@ handler (Params { username }) = do
   where 
     unlessUsernameTaken action = do
       account <- try $ getAccountByUsername username
-      case account of 
-        Left _ ->
-          action
-        Right _ ->
-          throwError $ Err.conflict $ "An account with this username already exists: " <> username
+      either (const action) (const throwInvalidData) account
+    throwInvalidData = throwError $ Err.invalidData fieldErrs
+      where fieldErrs = [Err.fieldErr "username" Err.NotUnique ]

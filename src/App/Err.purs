@@ -1,10 +1,13 @@
 module App.Err
   ( Err(..)
   , ErrCode(..)
+  , FieldErr(..)
+  , FieldErrCode(..)
   , err
   , badRequest
   , conflict
   , dbErr
+  , fieldErr
   , invalidData
   , notFound
   , unknown
@@ -21,31 +24,62 @@ import Foreign.Object as O
 newtype Err = Err { code :: ErrCode, msg :: Maybe String }
 
 instance encodeJsonErr :: EncodeJson Err where
-  encodeJson (Err { code, msg }) = A.fromObject obj
-    where obj = O.fromFoldable [ Tuple "code" (encodeJson code)
-                               , Tuple "msg" (A.fromString $ fromMaybe "" msg)
-                               ]
+  encodeJson = encodeErr
 
-data ErrCode 
+encodeErr :: Err -> A.Json
+encodeErr (Err { code, msg }) =
+  case code of
+       InvalidData fieldErrs ->
+         fromFoldable [ Tuple "code" $ encodeJson code
+                      , Tuple "fields" $  A.fromArray (map encodeJson fieldErrs)
+                      ]
+       _ ->
+         fromFoldable [ Tuple "code" $ encodeJson code
+                      , Tuple "msg" $ A.fromString (fromMaybe "" msg)
+                      ]
+  where fromFoldable = A.fromObject <<< O.fromFoldable
+
+data ErrCode
   = BadRequest
   | Conflict
   | DbErr
-  | InvalidData
+  | InvalidData (Array FieldErr)
   | NotFound
   | Unknown
 
-newtype FieldErr = 
-  FieldErr { code :: String
+instance encodeJsonErrCode :: EncodeJson ErrCode where
+  encodeJson = A.fromString <<< toErrName
+
+toErrName :: ErrCode -> String 
+toErrName BadRequest = "BAD_REQUEST"
+toErrName Conflict = "CONFLICT"
+toErrName DbErr = "DB_ERROR"
+toErrName (InvalidData _) = "INVALID_DATA"
+toErrName NotFound = "NOT_FOUND"
+toErrName Unknown = "UNKNOWN"
+
+newtype FieldErr =
+  FieldErr { code :: FieldErrCode
            , field :: String
            }
 
-instance encodeJsonErrCode :: EncodeJson ErrCode where
-  encodeJson BadRequest = A.fromString "BAD_REQUEST"
-  encodeJson Conflict = A.fromString "CONFLICT"
-  encodeJson DbErr = A.fromString "DB_ERROR"
-  encodeJson InvalidData = A.fromString "INVALID_DATA"
-  encodeJson NotFound = A.fromString "NOT_FOUND"
-  encodeJson Unknown = A.fromString "UNKNOWN"
+instance encodeJsonFieldErr :: EncodeJson FieldErr where
+  encodeJson = encodeFieldErr
+
+encodeFieldErr :: FieldErr -> A.Json
+encodeFieldErr (FieldErr { code, field }) = A.fromObject $ O.fromFoldable
+  [ Tuple "code" $ encodeJson code
+  , Tuple "field" $ A.fromString field
+  ]
+
+data FieldErrCode
+  = NotUnique
+
+instance encodeJsonFieldErrCode :: EncodeJson FieldErrCode where
+  encodeJson = A.fromString <<< toFieldErrName
+
+toFieldErrName :: FieldErrCode -> String
+toFieldErrName NotUnique = "NOT_UNIQUE"
 
 makeErr :: ErrCode -> Maybe String -> Err
 makeErr code msg = Err { code, msg }
@@ -62,11 +96,14 @@ conflict = err Conflict
 dbErr :: String -> Err
 dbErr = err DbErr
 
-invalidData :: String -> Err
-invalidData = err InvalidData
+invalidData :: Array FieldErr -> Err
+invalidData fieldErrs = makeErr (InvalidData fieldErrs) Nothing
 
 notFound :: String -> Err
 notFound = err NotFound
 
 unknown :: String -> Err
 unknown = err Unknown
+
+fieldErr :: String -> FieldErrCode -> FieldErr
+fieldErr field code = FieldErr { field, code }
