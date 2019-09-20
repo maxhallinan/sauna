@@ -31,9 +31,10 @@ toParams req = do
   pure $ Params { username }
 
 readUsername :: Foreign -> Except Err String
-readUsername = withExcept toInvalidErr <<< read
+readUsername = withExcept toInvalidData <<< read
   where read = F.readString <=< F.I.readProp "username"
-        toInvalidErr = const $ Err.badRequest "Missing required field `username` in the request body."
+        toInvalidData _ = Err.invalidData fieldErrs
+          where fieldErrs = [Err.fieldErr "username" Err.Required]
 
 handlePost :: Env -> Request -> Aff Response
 handlePost env = runJsonHandler env 201 handler

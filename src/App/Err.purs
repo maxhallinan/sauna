@@ -74,12 +74,14 @@ encodeFieldErr (FieldErr { code, field }) = A.fromObject $ O.fromFoldable
 
 data FieldErrCode
   = NotUnique
+  | Required
 
 instance encodeJsonFieldErrCode :: EncodeJson FieldErrCode where
   encodeJson = A.fromString <<< toFieldErrName
 
 toFieldErrName :: FieldErrCode -> String
 toFieldErrName NotUnique = "NOT_UNIQUE"
+toFieldErrName Required = "REQUIRED"
 
 makeErr :: ErrCode -> Maybe String -> Err
 makeErr code msg = Err { code, msg }
