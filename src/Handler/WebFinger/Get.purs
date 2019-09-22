@@ -2,31 +2,36 @@ module Handler.WebFinger.Get (handleGet) where
 
 import Prelude
 
+import App (App, runApp)
 import App.Env (Env, class Has)
 import App.Err (Err)
 import App.Err as Err
-import Control.Monad.Error.Class (class MonadError, class MonadThrow)
-import Control.Monad.Except (Except, withExcept)
+import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
+import Control.Monad.Except (Except, runExcept, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
 import Core.WebFinger (WebFinger(..))
+import Data.Argonaut (encodeJson)
+import Data.Argonaut as A
+import Data.Either (either)
+import Data.Tuple (Tuple(..))
 import Db.Account (getAccountByUsername)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
 import Foreign (Foreign)
 import Foreign as F
 import Foreign.Index as F.I
-import Handler (class Input, runJsonHandler)
+import Handler (class Input, toErrResponse, runJsonHandler)
 import Server (Request, Response)
 import SQLite3 (DBConnection)
 
 newtype Params = Params { username :: String }
 
 instance inputParams :: Input Params where
-  fromRequest = toParams
+  fromRequest = readParams
 
-toParams :: Request -> Except Err Params
-toParams req = do
+readParams :: Request -> Except Err Params
+readParams req = do
   resource <- readResource req.query
   pure $ Params { username: resource }
 
@@ -35,9 +40,28 @@ readResource = withExcept toInvalidErr <<< read
   where read = F.readString <=< F.I.readProp "resource"
         toInvalidErr = const $ Err.badRequest "Missing `resource` query parameter."
 
+{-
 handleGet :: Env -> Request -> Aff Response
 handleGet env = runJsonHandler env 200 handler
+-}
 
+handleGet :: Env -> Request -> Aff Response
+handleGet env =
+  readParams
+  >>> runExcept
+  >>> either throwError handler
+  >>> runApp env
+  >=> either toErrResponse toSuccessRes
+  >>> pure
+
+toSuccessRes :: WebFinger -> Response
+toSuccessRes wf =
+  { body: A.stringify $ encodeJson wf
+  , headers: [ Tuple "Access-Control-Allow-Origin" "*"
+             , Tuple "Content-Type" "application/jrd+json; charset=utf-8"
+             ]
+  , status: 200
+  }
 {-
   200 OK
   Access-Control-Allow-Origin: *

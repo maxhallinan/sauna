@@ -3,6 +3,7 @@ module Handler
   , Handler
   , fromRequest
   , runJsonHandler
+  , toErrResponse
   ) where
 
 import Prelude
@@ -43,7 +44,7 @@ runJsonHandler env successStatus handleReq =
 toErrResponse :: Err -> Response
 toErrResponse err =
   { body: A.stringify $ encodeJson err
-  , headers: []
+  , headers: [corsHeader, jsonHeader]
   , status: toErrStatus err
   }
 
@@ -60,6 +61,12 @@ toErrStatus (Err { code }) =
 toJsonResponse :: forall a. EncodeJson a => Int -> a -> Response
 toJsonResponse status output =
   { body : A.stringify $ encodeJson output
-  , headers: [Tuple "Content-Type" "application/json"]
+  , headers: [corsHeader, jsonHeader]
   , status
   }
+
+jsonHeader :: Tuple String String
+jsonHeader = Tuple "Content-Type" "application/json"
+
+corsHeader :: Tuple String String
+corsHeader = Tuple "Access-Control-Allow-Origin" "*"
