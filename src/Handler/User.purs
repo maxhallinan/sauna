@@ -10,6 +10,8 @@ import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError
 import Control.Monad.Except (runExcept, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
+import Core.ActivityPub (Person(..))
+import Data.Argonaut as A
 import Data.Either (either)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
@@ -43,9 +45,9 @@ handler req = do
   { username } <- readParams req
   case contentType of
     Just ActivityJson ->
-      handleGetActor username
+      handleGetActor req.hostname username
     Just LdJson ->
-      handleGetActor username
+      handleGetActor req.hostname username
     Just Html ->
       handleGetUser username
     Just Wildcard ->
@@ -63,9 +65,9 @@ readParams
   => MonadThrow Err m
   => Request
   -> m Params
-readParams { params } = 
+readParams { params } =
   map { username: _ } (readUsername params)
-  # runExcept 
+  # runExcept
   # either throwBadRequest pure
   where throwBadRequest _ = throwError (Err.badRequest "")
 
@@ -129,14 +131,25 @@ handleGetActor
   => MonadThrow Err m
   => MonadAff m
   => String
+  -> String
   -> m Response
-handleGetActor username = do
+handleGetActor hostname username = do
   account <- getAccountByUsername username
-  pure $ makeActorResponse ActivityJson account
+  pure $ makeActorResponse hostname ActivityJson account
 
-makeActorResponse :: ContentType -> Account -> Response
-makeActorResponse contentType (Account { username }) =
-  { body: ""
+makeActorResponse :: String -> ContentType -> Account -> Response
+makeActorResponse hostname contentType account@(Account { username }) =
+  { body: toActorJson account
   , headers: [ Tuple "Content-Type" (fromContentType contentType) ]
   , status: 200
+  }
+  where toActorJson = A.stringify <<< A.encodeJson <<< actorFromAccount hostname
+
+actorFromAccount :: String -> Account -> Person
+actorFromAccount hostname (Account { username }) = Person
+  { context: [ "https://www.w3.org/ns/activitystreams" ]
+  , id: "https://" <> hostname <> "/users/" <> username
+  , inbox: ""
+  , name: username
+  , outbox: ""
   }
