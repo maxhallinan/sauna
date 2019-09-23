@@ -11,6 +11,7 @@ module Server.Core
   ) where
 
 import Effect.Aff (Aff)
+import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple)
 import Foreign (Foreign)
 import Makkori as Makkori
@@ -30,7 +31,14 @@ newtype Port = Port Int
 port :: Int -> Port
 port = Port
 
-type Request = { body :: Foreign, hostname :: String, params :: Foreign, query :: Foreign }
+type Request = 
+  { accepts :: Array String -> Maybe String
+  , body :: Foreign
+  , headers :: Foreign
+  , hostname :: String
+  , params :: Foreign
+  , query :: Foreign 
+  }
 
 type Response = { body :: String, headers :: Array (Tuple String String), status :: Int }
 

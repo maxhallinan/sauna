@@ -1,11 +1,26 @@
 const express = require('express');
 
+exports._getHeaders = function (req) {
+  return req.headers;
+};
+
 exports._getHostname = function (req) {
   return req.hostname;
 };
 
 exports._getQuery = function (req) {
   return req.query;
+};
+
+exports._makeAccepts = function (just) {
+  return function (nothing) {
+    return function (req) {
+      return function (types) {
+        const t = req.accepts(types);
+        return t && typeof t === "string" ? just(t) : nothing;
+      };
+    };
+  };
 };
 
 exports._makeRouter = function () {

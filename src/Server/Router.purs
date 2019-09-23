@@ -44,11 +44,13 @@ makeHandler handler = M.makeHandler wrapped
 
 getRequest :: M.Request -> Aff Request
 getRequest req = liftEffect $ do
+  let accepts = M.E.makeAccepts req
   body <- M.getBody req
+  headers <- M.E.getHeaders req
+  hostname <- M.E.getHostname req
   params <- M.getParams req
   query <- M.E.getQuery req
-  hostname <- M.E.getHostname req
-  pure { body, hostname, params, query }
+  pure { accepts, body, headers, hostname, params, query }
 
 sendResponse :: M.Response -> Response -> Aff Unit
 sendResponse res { body, headers, status } = liftEffect $ do
