@@ -1,5 +1,9 @@
 const express = require('express');
 
+exports._getHostname = function (req) {
+  return req.hostname;
+};
+
 exports._getQuery = function (req) {
   return req.query;
 };

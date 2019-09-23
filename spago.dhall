@@ -15,6 +15,7 @@ You can edit this file as you like.
     , "makkori"
     , "node-http"
     , "node-sqlite3"
+    , "parsing"
     , "psci-support"
     ]
 , packages =

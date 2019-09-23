@@ -30,7 +30,7 @@ newtype Port = Port Int
 port :: Int -> Port
 port = Port
 
-type Request = { body :: Foreign, params :: Foreign, query :: Foreign }
+type Request = { body :: Foreign, hostname :: String, params :: Foreign, query :: Foreign }
 
 type Response = { body :: String, headers :: Array (Tuple String String), status :: Int }
 

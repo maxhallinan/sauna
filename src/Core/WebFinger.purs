@@ -1,34 +1,38 @@
 module Core.WebFinger
   ( Link(..)
   , LinkType(..)
-  , WebFinger(..)
-  , WebFingerFields
-  , toJsonString
+  , Jrd(..)
+  , Uri
+  , UriScheme(..)
+  , parseUri
   ) where
 
 import Prelude
 
-import Data.Argonaut (class EncodeJson, Json, encodeJson)
+import Data.Argonaut (class EncodeJson, Json)
 import Data.Argonaut as A
+import Data.Array as Array
+import Data.Either (Either)
+import Data.String.CodeUnits (fromCharArray)
 import Data.Tuple (Tuple(..))
 import Foreign.Object as O
+import Text.Parsing.Parser as P
+import Text.Parsing.Parser.String as PS
 
-newtype WebFinger = WebFinger WebFingerFields
-
-type WebFingerFields =
+newtype Jrd a = Jrd
   { aliases :: Array String
   , links :: Array Link
   , subject :: String
   }
 
-instance encodeJsonWebFinger :: EncodeJson WebFinger where
-  encodeJson = encodeWebFinger
+instance encodeJsonJrd :: EncodeJson (Jrd a) where
+  encodeJson = encodeJrd
 
-encodeWebFinger :: WebFinger -> Json
-encodeWebFinger (WebFinger wf) = A.fromObject $ O.fromFoldable $
-  [ Tuple "aliases" $ A.fromArray (map A.fromString wf.aliases)
-  , Tuple "links" $ A.fromArray (map encodeLink wf.links)
-  , Tuple "subject" $ A.fromString wf.subject
+encodeJrd :: forall a. Jrd a -> Json
+encodeJrd (Jrd { aliases, links, subject }) = A.fromObject $ O.fromFoldable $
+  [ Tuple "aliases" $ A.fromArray (map A.fromString aliases)
+  , Tuple "links" $ A.fromArray (map encodeLink links)
+  , Tuple "subject" $ A.fromString subject
   ]
 
 newtype Link = Link
@@ -52,5 +56,20 @@ data LinkType = ActivityJson
 toMediaType :: LinkType -> String
 toMediaType ActivityJson = "application/activity+json"
 
-toJsonString :: WebFinger -> String
-toJsonString = A.stringify <<< encodeJson
+type Uri = { host :: String, name :: String, raw :: String, scheme :: UriScheme }
+
+data UriScheme = Acct | Http | Https
+
+parseUri :: String -> Either P.ParseError Uri
+parseUri s = P.runParser s (acctUriParser s)
+
+type Parser a = P.Parser String a
+
+acctUriParser :: String -> Parser Uri
+acctUriParser raw = do
+  _ <- PS.string "acct:"
+  name <- fromCharArray <$> Array.some (PS.noneOf ['@'])
+  _ <- PS.string "@"
+  host <- fromCharArray <$> Array.some PS.anyChar
+  _ <- PS.eof
+  pure { host, name, raw, scheme: Acct }

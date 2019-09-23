@@ -47,7 +47,8 @@ getRequest req = liftEffect $ do
   body <- M.getBody req
   params <- M.getParams req
   query <- M.E.getQuery req
-  pure { body, params, query }
+  hostname <- M.E.getHostname req
+  pure { body, hostname, params, query }
 
 sendResponse :: M.Response -> Response -> Aff Unit
 sendResponse res { body, headers, status } = liftEffect $ do

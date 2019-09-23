@@ -2,6 +2,7 @@ module Makkori.Extra
   ( Router
   , delete
   , get
+  , getHostname
   , getQuery
   , makeRouter
   , post
@@ -16,6 +17,9 @@ import Effect (Effect)
 import Effect.Uncurried as EU
 import Foreign (Foreign)
 import Makkori (App, Handler, Path, Request)
+
+getHostname :: Request -> Effect String
+getHostname = EU.runEffectFn1 _getHostname
 
 getQuery :: Request -> Effect Foreign
 getQuery = EU.runEffectFn1 _getQuery
@@ -42,6 +46,7 @@ put :: Path -> Handler -> Router -> Effect Unit
 put = EU.runEffectFn3 _put
 
 foreign import data Router :: Type
+foreign import _getHostname :: EU.EffectFn1 Request String
 foreign import _getQuery :: EU.EffectFn1 Request Foreign
 foreign import _makeRouter :: Effect Router
 foreign import _useRouter :: EU.EffectFn3 Path Router App Unit
