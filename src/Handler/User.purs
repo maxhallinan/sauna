@@ -11,6 +11,7 @@ import Control.Monad.Except (runExcept, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
 import Core.ActivityPub (Person(..))
+import Crypto (unPublicKey)
 import Data.Argonaut as A
 import Data.Either (either)
 import Data.Maybe (Maybe(..))
@@ -135,8 +136,7 @@ handleGetActor
   -> String
   -> m Response
 handleGetActor hostname username = do
-  account <- catchError (getAccountByUsername username)
-                        (const $ throwNotFound username)
+  account <- getAccountByUsername username
   pure $ makeActorResponse hostname ActivityJson account
 
 makeActorResponse :: String -> ContentType -> Account -> Response
@@ -148,13 +148,18 @@ makeActorResponse hostname contentType account@(Account { username }) =
   where toActorJson = A.stringify <<< A.encodeJson <<< actorFromAccount hostname
 
 actorFromAccount :: String -> Account -> Person
-actorFromAccount hostname (Account { username }) = Person
-  { context: [ "https://www.w3.org/ns/activitystreams" ]
-  , id: "https://" <> hostname <> "/users/" <> username
+actorFromAccount hostname (Account { pubKey, username }) = Person
+  { context: [ "https://www.w3.org/ns/activitystreams", "https://w3id.org/security/v1" ]
+  , id: actorId
   , inbox: ""
   , name: username
   , outbox: ""
+  , publicKey: { id: actorId <> "#main-key"
+               , owner: actorId
+               , publicKeyPem: unPublicKey pubKey
+               }
   }
+  where actorId = "https://" <> hostname <> "/users/" <> username
 
 throwNotFound
   :: forall m a

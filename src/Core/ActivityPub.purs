@@ -1,4 +1,4 @@
-module Core.ActivityPub (Person(..)) where
+module Core.ActivityPub (Person(..), PublicKeyProp) where
 
 import Prelude
 
@@ -13,6 +13,7 @@ newtype Person = Person
   , inbox :: String
   , name :: String
   , outbox :: String
+  , publicKey :: PublicKeyProp
   }
 
 instance encodeJsonPerson :: EncodeJson Person where
@@ -26,4 +27,14 @@ encodePerson (Person actor) = A.fromObject $ O.fromFoldable
   , Tuple "name" $ A.fromString actor.name
   , Tuple "outbox" $ A.fromString actor.outbox
   , Tuple "type" $ A.fromString "Person"
+  , Tuple "publicKey" $ encodePublicKeyProp actor.publicKey
+  ]
+
+type PublicKeyProp = { id :: String, owner :: String, publicKeyPem :: String }
+
+encodePublicKeyProp :: PublicKeyProp -> Json
+encodePublicKeyProp { id, owner, publicKeyPem } = A.fromObject $ O.fromFoldable
+  [ Tuple "id" $ A.fromString id
+  , Tuple "owner" $ A.fromString owner
+  , Tuple "publicKeyPem" $ A.fromString publicKeyPem
   ]

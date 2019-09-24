@@ -5,12 +5,11 @@ import Prelude
 import App.Env (class Has)
 import App.Err (Err)
 import App.Err as Err
-import Control.Apply (lift2)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
-import Crypto (PrivateKey, PublicKey, unPrivateKey, unPublicKey)
+import Crypto (PrivateKey, PublicKey, makePublicKey, unPrivateKey, unPublicKey)
 import Data.Either (either)
 import Data.Foldable (intercalate)
 import Db.Core (asFirstRow, runQuery)
@@ -20,15 +19,22 @@ import Foreign as F
 import Foreign.Index as F.I
 import SQLite3 (DBConnection)
 
-decodeAccountRow :: Foreign -> F Account
-decodeAccountRow f = lift2 toAccount (decodeId f) (decodeUsername f)
-  where toAccount id username = Account { id, username }
+readAccountRow :: Foreign -> F Account
+readAccountRow f =
+  makeAccount
+  <$> readId f
+  <*> readUsername f
+  <*> readPubkey f
+  where makeAccount id username pubKey = Account { id, pubKey, username }
 
-decodeId :: Foreign -> F Int
-decodeId = F.readInt <=< F.I.readProp "id" 
+readId :: Foreign -> F Int
+readId = F.readInt <=< F.I.readProp "id"
 
-decodeUsername :: Foreign -> F String
-decodeUsername = F.readString <=< F.I.readProp "username"
+readUsername :: Foreign -> F String
+readUsername = F.readString <=< F.I.readProp "username"
+
+readPubkey :: Foreign -> F PublicKey
+readPubkey = map makePublicKey <<< F.readString <=< F.I.readProp "pubkey"
 
 getAccountByUsername
   :: forall env m
@@ -45,11 +51,11 @@ getAccountByUsername username = do
   if isUndefined firstRow
   then throwNotFound
   else do
-    let account = decodeAccount firstRow
+    let account = readAccount firstRow
     either throwDbErr pure account
-  where query = "SELECT * FROM accounts WHERE accounts.username = ?"  
+  where query = "SELECT * FROM accounts WHERE accounts.username = ?"
         params = [F.unsafeToForeign username]
-        decodeAccount = decodeAccountRow >>> runExcept
+        readAccount = readAccountRow >>> runExcept
         throwNotFound = throwError $ Err.notFound ("Account not found: " <> username)
         throwDbErr = throwError <<< Err.dbErr <<< intercalate " " <<< map show
 

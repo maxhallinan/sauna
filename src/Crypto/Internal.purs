@@ -3,7 +3,7 @@ module Crypto.Internal where
 import Data.Newtype (class Newtype, unwrap)
 import Effect (Effect)
 
-type Keypair = 
+type Keypair =
   { private :: PrivateKey
   , public :: PublicKey
   }
@@ -16,6 +16,12 @@ derive instance newtypePublicKey :: Newtype PublicKey _
 
 generateRSAKeypair :: Effect Keypair
 generateRSAKeypair = _generateRSAKeypair PrivateKey PublicKey
+
+makePrivateKey :: String -> PrivateKey
+makePrivateKey = PrivateKey
+
+makePublicKey :: String -> PublicKey
+makePublicKey = PublicKey
 
 unPrivateKey :: PrivateKey -> String
 unPrivateKey = unwrap

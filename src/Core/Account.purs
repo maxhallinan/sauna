@@ -2,6 +2,7 @@ module Core.Account (Account(..), AccountFields, toJsonString) where
 
 import Prelude
 
+import Crypto (PublicKey)
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Argonaut as A
 import Data.Int (toNumber)
@@ -12,6 +13,7 @@ newtype Account = Account AccountFields
 
 type AccountFields = 
   { id :: Int
+  , pubKey :: PublicKey
   , username :: String
   }
 
