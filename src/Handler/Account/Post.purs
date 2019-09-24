@@ -9,10 +9,13 @@ import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError
 import Control.Monad.Except (Except, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account)
+import Crypto (generateRSAKeypair)
+import Debug.Trace (spy)
 import Data.Either (either)
 import Db.Account (getAccountByUsername, insertAccount)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
+import Effect.Class (liftEffect)
 import Foreign (Foreign)
 import Foreign as F
 import Foreign.Index as F.I
@@ -49,7 +52,11 @@ handler
   => Params
   -> m Account
 handler (Params { username }) = do
-  unlessUsernameTaken $ insertAccount { username }
+  keypair <- liftEffect generateRSAKeypair
+  unlessUsernameTaken $ insertAccount { privKey: keypair.private
+                                      , pubKey: keypair.public
+                                      , username 
+                                      }
   where 
     unlessUsernameTaken action = do
       account <- try $ getAccountByUsername username

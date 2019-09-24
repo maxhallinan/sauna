@@ -10,6 +10,7 @@ import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError
 import Control.Monad.Except (runExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
+import Crypto (PrivateKey, PublicKey, unPrivateKey, unPublicKey)
 import Data.Either (either)
 import Data.Foldable (intercalate)
 import Db.Core (asFirstRow, runQuery)
@@ -59,10 +60,13 @@ insertAccount
   => MonadAff m
   => MonadError Err m
   => MonadThrow Err m
-  => { username :: String }
+  => { privKey :: PrivateKey, pubKey :: PublicKey, username :: String }
   -> m Account
 insertAccount a = do
   _ <- runQuery query params
   getAccountByUsername a.username
-  where query = "INSERT INTO accounts (username) VALUES (?)"
-        params = [F.unsafeToForeign a.username]
+  where query = "INSERT INTO accounts (username, privkey, pubkey) VALUES (?, ?, ?)"
+        params = [ F.unsafeToForeign a.username
+                 , F.unsafeToForeign $ unPrivateKey a.privKey
+                 , F.unsafeToForeign $ unPublicKey a.pubKey
+                 ]
