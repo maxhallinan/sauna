@@ -6,7 +6,7 @@ import App (runApp)
 import App.Env (Env, class Has)
 import App.Err (Err)
 import App.Err as Err
-import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
+import Control.Monad.Error.Class (class MonadError, class MonadThrow, catchError, throwError)
 import Control.Monad.Except (runExcept, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
@@ -53,7 +53,7 @@ handler req = do
     Just Wildcard ->
       handleGetUser username
     Nothing ->
-      throwError (Err.notFound "")
+      throwNotFound username
   where contentType = accepts [ ActivityJson, Html, LdJson, Wildcard ]
         accepts = toContentType <=< req.accepts <<< map fromContentType
 
@@ -113,7 +113,8 @@ handleGetUser
   => String
   -> m Response
 handleGetUser username = do
-  account <- getAccountByUsername username
+  account <- catchError (getAccountByUsername username)
+                        (const $ throwNotFound username)
   pure $ makeHtmlResponse account
 
 makeHtmlResponse :: Account -> Response
@@ -134,7 +135,8 @@ handleGetActor
   -> String
   -> m Response
 handleGetActor hostname username = do
-  account <- getAccountByUsername username
+  account <- catchError (getAccountByUsername username)
+                        (const $ throwNotFound username)
   pure $ makeActorResponse hostname ActivityJson account
 
 makeActorResponse :: String -> ContentType -> Account -> Response
@@ -153,3 +155,12 @@ actorFromAccount hostname (Account { username }) = Person
   , name: username
   , outbox: ""
   }
+
+throwNotFound
+  :: forall m a
+   . MonadError Err m
+  => MonadThrow Err m
+  => String
+  -> m a
+throwNotFound username = throwError $ Err.notFound msg
+  where msg = "Unknown user " <> username
