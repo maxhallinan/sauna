@@ -1,11 +1,15 @@
-module Db.Activity (getActivityByActivityId, insertActivity) where
+module Db.Activity 
+  ( getActivityByActivityId
+  , insertAccountActivity
+  , insertActivity
+  ) where
 
 import Prelude
 
 import App.Env (class Has)
 import App.Err (Err)
 import App.Err as Err
-import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
+import Control.Monad.Error.Class (class MonadError, class MonadThrow, catchError, throwError)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.ActivityPub (Activity(..), ActivityType, fromActivityType, toActivityType)
@@ -67,10 +71,33 @@ insertActivity
   => MonadThrow Err m
   => { activityType :: ActivityType, activityId :: String }
   -> m Activity
-insertActivity a = do
-  ac <- runQuery query params
-  getActivityByActivityId a.activityId
+insertActivity { activityId, activityType } = unlessActivityExists do
+  _ <- runQuery query params
+  getActivity
   where query = "INSERT INTO activities (activity_id, activity_type) VALUES (?, ?)"
-        params = [ F.unsafeToForeign a.activityId
-                 , F.unsafeToForeign $ fromActivityType a.activityType
+        params = [ F.unsafeToForeign activityId
+                 , F.unsafeToForeign $ fromActivityType activityType
+                 ]
+
+        getActivity :: m Activity
+        getActivity = getActivityByActivityId activityId
+
+        unlessActivityExists :: m Activity -> m Activity
+        unlessActivityExists action = catchError getActivity (const action)
+
+insertAccountActivity 
+  :: forall env m
+   . Has DBConnection env
+  => MonadReader env m
+  => MonadAff m
+  => MonadError Err m
+  => MonadThrow Err m
+  => { accountId :: Int, activityId :: Int }
+  -> m Unit
+insertAccountActivity { accountId, activityId } = do
+  _ <- runQuery query params
+  pure unit
+  where query = "INSERT INTO account_activities (account_id, activity_id) VALUES (?, ?)"
+        params = [ F.unsafeToForeign accountId
+                 , F.unsafeToForeign activityId
                  ]

@@ -10,9 +10,9 @@ CREATE TABLE IF NOT EXISTS activities (
   activity_type TEXT
 );
 CREATE TABLE IF NOT EXISTS account_activities (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  account_id TEXT,
-  activity_id TEXT,
+  account_id TEXT NOT NULL,
+  activity_id TEXT NOT NULL,
   FOREIGN KEY (account_id) REFERENCES accounts(id),
-  FOREIGN KEY (activity_id) REFERENCES activities(id)
+  FOREIGN KEY (activity_id) REFERENCES activities(id),
+  PRIMARY KEY (account_id, activity_id)
 );

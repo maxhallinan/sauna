@@ -9,13 +9,15 @@ import App.Err as Err
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
 import Control.Monad.Except (runExcept, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
+import Core.Account (Account(..))
 import Core.ActivityPub (Activity(..), ActivityType, toActivityType)
 import Data.Array as Array
 import Data.Either (either)
 import Data.Maybe (Maybe(..))
 import Data.String.Common (split)
 import Data.String.Pattern (Pattern(..))
-import Db.Activity (insertActivity)
+import Db.Account (getAccountByUsername)
+import Db.Activity (insertAccountActivity, insertActivity)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
 import Foreign (F, Foreign)
@@ -122,8 +124,12 @@ handleActivityPost
   -> Msg
   -> m Response
 handleActivityPost username msg = do
+  (Account account) <- getAccountByUsername username
   (Activity activity) <- insertActivity { activityId: msg.activityId
-                             , activityType: msg.activityType
+                                        , activityType: msg.activityType
+                                        }
+  _ <- insertAccountActivity { accountId: account.id
+                             , activityId: activity.id 
                              }
   pure { body: ""
        , headers: []
