@@ -6,10 +6,12 @@ module Makkori.Extra
   , getHostname
   , getQuery
   , makeAccepts
+  , makeJsonMiddleware
   , makeRouter
   , post
   , put
   , useRouter
+  , useRouterMiddleware
   , useSubRouter
   ) where
 
@@ -19,7 +21,7 @@ import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Uncurried as EU
 import Foreign (Foreign)
-import Makkori (App, Handler, Path, Request)
+import Makkori (App, Handler, Middleware, Path, Request)
 
 getHeaders :: Request -> Effect Foreign
 getHeaders = EU.runEffectFn1 _getHeaders
@@ -33,8 +35,14 @@ getQuery = EU.runEffectFn1 _getQuery
 makeAccepts :: Request -> Array String -> Maybe String
 makeAccepts req types = _makeAccepts Just Nothing req types
 
+makeJsonMiddleware :: Array String -> Effect Middleware
+makeJsonMiddleware = EU.runEffectFn1 _makeJsonMiddleware
+
 makeRouter :: Effect Router
 makeRouter = _makeRouter
+
+useRouterMiddleware :: Path -> Middleware -> Router -> Effect Unit
+useRouterMiddleware = EU.runEffectFn3 _useRouterMiddleware
 
 useRouter :: Path -> Router -> App -> Effect Unit
 useRouter = EU.runEffectFn3 _useRouter
@@ -60,7 +68,9 @@ foreign import _getHostname :: EU.EffectFn1 Request String
 foreign import _getQuery :: EU.EffectFn1 Request Foreign
 foreign import _makeRouter :: Effect Router
 foreign import _makeAccepts :: (String -> Maybe String) -> Maybe String -> Request -> Array String -> Maybe String
+foreign import _makeJsonMiddleware :: EU.EffectFn1 (Array String) Middleware
 foreign import _useRouter :: EU.EffectFn3 Path Router App Unit
+foreign import _useRouterMiddleware :: EU.EffectFn3 Path Middleware Router Unit
 foreign import _useSubRouter :: EU.EffectFn3 Path Router Router Unit
 foreign import _delete :: EU.EffectFn3 Path Handler Router Unit
 foreign import _get :: EU.EffectFn3 Path Handler Router Unit

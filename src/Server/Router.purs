@@ -1,6 +1,7 @@
 module Server.Router
   ( makeRouter
   , registerRoute
+  , useRouterMiddleware
   , useSubRouter
   ) where
 
@@ -10,13 +11,16 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
-import Server.Core (Handler, Method(..), Path, Request, Response, Router)
+import Server.Core (Handler, Method(..), Middleware, Path, Request, Response, Router)
 import Effect.Aff (Aff, launchAff_)
 import Makkori as M
 import Makkori.Extra as M.E
 
 makeRouter :: Effect Router
 makeRouter = M.E.makeRouter
+
+useRouterMiddleware :: Path -> Middleware -> Router -> Effect Unit
+useRouterMiddleware = M.E.useRouterMiddleware
 
 useSubRouter :: Path -> Router -> Router -> Effect Unit
 useSubRouter = M.E.useSubRouter

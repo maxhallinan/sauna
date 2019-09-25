@@ -1,6 +1,7 @@
 module Server.Core 
   ( Handler
   , Method(..)
+  , Middleware
   , Path
   , Port(..)
   , Request
@@ -11,7 +12,7 @@ module Server.Core
   ) where
 
 import Effect.Aff (Aff)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Tuple (Tuple)
 import Foreign (Foreign)
 import Makkori as Makkori
@@ -20,6 +21,8 @@ import Makkori.Extra as Makkori.Extra
 type Handler = Request -> Aff Response
 
 data Method = Delete | Get | Post | Put
+
+type Middleware = Makkori.Middleware
 
 type Path = Makkori.Path
 

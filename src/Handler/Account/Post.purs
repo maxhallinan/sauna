@@ -54,9 +54,9 @@ handler (Params { username }) = do
   keypair <- liftEffect generateRSAKeypair
   unlessUsernameTaken $ insertAccount { privKey: keypair.private
                                       , pubKey: keypair.public
-                                      , username 
+                                      , username
                                       }
-  where 
+  where
     unlessUsernameTaken action = do
       account <- try $ getAccountByUsername username
       either (const action) (const throwInvalidData) account

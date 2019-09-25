@@ -27,8 +27,16 @@ exports._makeRouter = function () {
   return express.Router();
 };
 
+exports._makeJsonMiddleware = function (type) {
+  return express.json({ type: type });
+};
+
 exports._useRouter = function (path, router, app) {
   app.use(path, router);
+};
+
+exports._useRouterMiddleware = function (path, middleware, router) {
+  router.use(path, middleware);
 };
 
 exports._useSubRouter = function (path, parent, child) {

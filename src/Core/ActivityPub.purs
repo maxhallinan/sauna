@@ -1,10 +1,17 @@
-module Core.ActivityPub (Person(..), PublicKeyProp) where
+module Core.ActivityPub
+  ( Activity(..)
+  , ActivityType(..)
+  , Person(..)
+  , PublicKeyProp
+  , fromActivityType
+  , toActivityType
+  ) where
 
 import Prelude
 
 import Data.Argonaut (class EncodeJson, Json, encodeJson)
 import Data.Argonaut as A
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Tuple (Tuple(..))
 import Foreign.Object as O
 
@@ -85,3 +92,27 @@ encodeOrderedCollectionPage (OrderedCollectionPage p) = A.fromObject $ O.fromFol
   , Tuple "totalItems" $ encodeJson p.totalItems
   , Tuple "type" $ encodeJson "OrderedCollectionPage"
   ]
+
+data ActivityType = Accept | Create | Follow | Other String | Reject | Remove
+
+toActivityType :: String -> ActivityType
+toActivityType "Accept" = Accept
+toActivityType "Create" = Create
+toActivityType "Follow" = Follow
+toActivityType "Reject" = Reject
+toActivityType "Remove" = Remove
+toActivityType t = Other t
+
+fromActivityType :: ActivityType -> String
+fromActivityType Accept = "Accept"
+fromActivityType Create = "Create"
+fromActivityType Follow = "Follow"
+fromActivityType (Other t) = t
+fromActivityType Reject = "Reject"
+fromActivityType Remove = "Remove"
+
+newtype Activity = Activity
+  { activityId :: String
+  , activityType :: ActivityType
+  , id :: Int
+  }
