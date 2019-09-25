@@ -151,7 +151,7 @@ actorFromAccount :: String -> Account -> Person
 actorFromAccount hostname (Account { pubKey, username }) = Person
   { context: [ "https://www.w3.org/ns/activitystreams", "https://w3id.org/security/v1" ]
   , id: actorId
-  , inbox: ""
+  , inbox: actorId <> "/inbox"
   , name: username
   , outbox: ""
   , publicKey: { id: actorId <> "#main-key"
