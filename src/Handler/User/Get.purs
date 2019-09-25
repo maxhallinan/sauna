@@ -1,4 +1,4 @@
-module Handler.User (handleGet) where
+module Handler.User.Get (handleGet) where
 
 import Prelude
 
