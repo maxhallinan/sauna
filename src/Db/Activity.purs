@@ -1,4 +1,4 @@
-module Db.Activity 
+module Db.Activity
   ( getActivityByActivityId
   , insertAccountActivity
   , insertActivity
@@ -69,14 +69,15 @@ insertActivity
   => MonadAff m
   => MonadError Err m
   => MonadThrow Err m
-  => { activityType :: ActivityType, activityId :: String }
+  => { activityBlob :: String, activityId :: String, activityType :: ActivityType }
   -> m Activity
-insertActivity { activityId, activityType } = unlessActivityExists do
+insertActivity { activityBlob, activityId, activityType } = unlessActivityExists do
   _ <- runQuery query params
   getActivity
-  where query = "INSERT INTO activities (activity_id, activity_type) VALUES (?, ?)"
+  where query = "INSERT INTO activities (activity_id, activity_type, activity_blob) VALUES (?, ?, ?)"
         params = [ F.unsafeToForeign activityId
                  , F.unsafeToForeign $ fromActivityType activityType
+                 , F.unsafeToForeign activityBlob
                  ]
 
         getActivity :: m Activity
@@ -85,7 +86,7 @@ insertActivity { activityId, activityType } = unlessActivityExists do
         unlessActivityExists :: m Activity -> m Activity
         unlessActivityExists action = catchError getActivity (const action)
 
-insertAccountActivity 
+insertAccountActivity
   :: forall env m
    . Has DBConnection env
   => MonadReader env m

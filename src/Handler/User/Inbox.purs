@@ -21,6 +21,7 @@ import Effect.Aff.Class (class MonadAff)
 import Foreign (F, Foreign)
 import Foreign as F
 import Foreign.Index as F.I
+import Global.Unsafe (unsafeStringify)
 import Handler (toErrResponse)
 import Server (Request, Response)
 import SQLite3 (DBConnection)
@@ -58,7 +59,8 @@ type Params =
   }
 
 type Msg =
-  { activityId :: String
+  { activityBlob :: String
+  , activityId :: String
   , activityType :: ActivityType
   }
 
@@ -101,9 +103,13 @@ toContentType =
 
 readMsg :: Foreign -> F Msg
 readMsg f =
-  { activityId: _, activityType:_ }
-  <$> readActivityId f
+  { activityBlob:_, activityId:_, activityType:_ }
+  <$> readActivityBlob f
+  <*> readActivityId f
   <*> readActivityType f
+
+readActivityBlob :: Foreign -> F String
+readActivityBlob = pure <<< unsafeStringify
 
 readActivityId :: Foreign -> F String
 readActivityId =
@@ -146,7 +152,8 @@ handleActivityPost
   -> m Response
 handleActivityPost username msg = do
   (Account account) <- getAccountByUsername username
-  (Activity activity) <- insertActivity { activityId: msg.activityId
+  (Activity activity) <- insertActivity { activityBlob: msg.activityBlob
+                                        , activityId: msg.activityId
                                         , activityType: msg.activityType
                                         }
   insertAccountActivity { accountId: account.id

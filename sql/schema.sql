@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE TABLE IF NOT EXISTS activities (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   activity_id TEXT,
-  activity_type TEXT
+  activity_type TEXT,
+  activity_blob TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS account_activities (
   account_id TEXT NOT NULL,
