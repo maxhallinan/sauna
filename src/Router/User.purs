@@ -13,7 +13,7 @@ import Server.Router (useRouterMiddleware)
 makeRouter :: Env -> Effect Router
 makeRouter env = do
   router <- S.makeRouter
-  activityJson <- S.makeJsonMiddleware [ "applicaton/ld+json", "application/activity+json" ]
+  activityJson <- S.makeJsonMiddleware [ "application/ld+json", "application/activity+json" ]
   useRouterMiddleware (path "/") activityJson router
   _ <- registerRoute Post (path "/:username/inbox") (Inbox.handlePost env) router
   _ <- registerRoute Get (path "/:username") (handleGet env) router

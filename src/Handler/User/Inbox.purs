@@ -6,16 +6,14 @@ import App (runApp)
 import App.Env (Env, class Has)
 import App.Err (Err)
 import App.Err as Err
+import ContentType as ContentType
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
 import Control.Monad.Except (runExcept, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
 import Core.ActivityPub (Activity(..), ActivityType, toActivityType)
-import Data.Array as Array
 import Data.Either (either)
 import Data.Maybe (Maybe(..))
-import Data.String.Common (split)
-import Data.String.Pattern (Pattern(..))
 import Db.Account (getAccountByUsername)
 import Db.Activity (insertAccountActivity, insertActivity)
 import Effect.Aff (Aff)
@@ -82,33 +80,56 @@ readParams { body, headers, params } =
 data ContentType = ActivityJson | LdJson
 
 toContentType :: String -> Maybe ContentType
-toContentType "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"" = Just LdJson
-toContentType s =
-  split (Pattern ";") s
-  # Array.head
-  >>= case _ of
+toContentType =
+  ContentType.parse
+  >>> either (const Nothing) toSupportedType
+  where
+    toSupportedType { mimeType, parameters } =
+      case mimeType of
         "application/activity+json" ->
           Just ActivityJson
+        "application/ld+json" ->
+          -- Mime-type of `application/ld+json` must have the Activity Streams profile.
+          either (const Nothing)
+                 ldJsonFromProfile
+                 (readProfile parameters)
         _ ->
           Nothing
+    readProfile = runExcept <<< (F.readString <=< F.I.readProp "profile")
+    ldJsonFromProfile "https://www.w3.org/ns/activitystreams" = Just LdJson
+    ldJsonFromProfile _ = Nothing
 
 readMsg :: Foreign -> F Msg
 readMsg f =
-  { activityId:_, activityType:_ }
+  { activityId: _, activityType:_ }
   <$> readActivityId f
   <*> readActivityType f
 
 readActivityId :: Foreign -> F String
-readActivityId = errorsAt "id" <<< F.readString <=< F.I.readProp "id"
+readActivityId =
+  errorsAt "id"
+  <<< F.readString
+  <=< F.I.readProp "id"
 
 readActivityType :: Foreign -> F ActivityType
-readActivityType = errorsAt "type" <<< map toActivityType <<< F.readString <=< F.I.readProp "type"
+readActivityType =
+  errorsAt "type"
+  <<< map toActivityType
+  <<< F.readString
+  <=< F.I.readProp "type"
 
 readContentType :: Foreign -> F (Maybe ContentType)
-readContentType = errorsAt "content-type" <<< map toContentType <<< F.readString <=< F.I.readProp "content-type"
+readContentType =
+  errorsAt "content-type"
+  <<< map toContentType
+  <<< F.readString
+  <=< F.I.readProp "content-type"
 
 readUsername :: Foreign -> F String
-readUsername = errorsAt "username" <<< F.readString <=< F.I.readProp "username"
+readUsername =
+  errorsAt "username"
+  <<< F.readString
+  <=< F.I.readProp "username"
 
 errorsAt :: forall a. String -> F a -> F a
 errorsAt prop = withExcept $ map (F.I.errorAt prop)
@@ -128,13 +149,17 @@ handleActivityPost username msg = do
   (Activity activity) <- insertActivity { activityId: msg.activityId
                                         , activityType: msg.activityType
                                         }
-  _ <- insertAccountActivity { accountId: account.id
-                             , activityId: activity.id 
-                             }
-  pure { body: ""
-       , headers: []
-       , status: 201
-       }
+  insertAccountActivity { accountId: account.id
+                        , activityId: activity.id
+                        }
+  pure $ makeResponse
+
+makeResponse :: Response
+makeResponse =
+  { body: ""
+  , headers: []
+  , status: 201
+  }
 
 throwUnsupportedMedia
   :: forall m a
