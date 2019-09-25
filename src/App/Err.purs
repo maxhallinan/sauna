@@ -11,6 +11,7 @@ module App.Err
   , invalidData
   , notFound
   , unknown
+  , unsupportedMedia
   ) where
 
 import Prelude
@@ -46,17 +47,19 @@ data ErrCode
   | InvalidData (Array FieldErr)
   | NotFound
   | Unknown
+  | UnsupportedMedia
 
 instance encodeJsonErrCode :: EncodeJson ErrCode where
   encodeJson = A.fromString <<< toErrName
 
-toErrName :: ErrCode -> String 
+toErrName :: ErrCode -> String
 toErrName BadRequest = "BAD_REQUEST"
 toErrName Conflict = "CONFLICT"
 toErrName DbErr = "DB_ERROR"
 toErrName (InvalidData _) = "INVALID_DATA"
 toErrName NotFound = "NOT_FOUND"
 toErrName Unknown = "UNKNOWN"
+toErrName UnsupportedMedia = "UNSUPPORTED_MEDIA"
 
 newtype FieldErr =
   FieldErr { code :: FieldErrCode
@@ -106,6 +109,9 @@ notFound = err NotFound
 
 unknown :: String -> Err
 unknown = err Unknown
+
+unsupportedMedia :: String -> Err
+unsupportedMedia = err UnsupportedMedia
 
 fieldErr :: String -> FieldErrCode -> FieldErr
 fieldErr field code = FieldErr { field, code }

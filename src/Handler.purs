@@ -54,6 +54,7 @@ toErrStatus (Err { code }) =
        BadRequest -> 400
        NotFound -> 404
        Conflict -> 409
+       UnsupportedMedia -> 415
        (InvalidData _) -> 422
        DbErr -> 500
        Unknown -> 500
