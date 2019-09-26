@@ -2,6 +2,9 @@ module Handler.User.Inbox (handlePost) where
 
 import Prelude
 
+import Affjax as AX
+import Affjax.ResponseFormat as ResponseFormat
+import Affjax.RequestHeader as RequestHeader
 import App (runApp)
 import App.Env (Env, class Has)
 import App.Err (Err)
@@ -12,17 +15,21 @@ import Control.Monad.Except (runExcept, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
 import Core.ActivityPub (Activity(..), ActivityType, toActivityType)
-import Data.Either (either)
+import Data.Argonaut as J
+import Data.Array as Array
+import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..))
+import Data.MediaType (MediaType(..))
 import Db.Account (getAccountByUsername)
 import Db.Activity (insertAccountActivity, insertActivity)
 import Effect.Aff (Aff)
-import Effect.Aff.Class (class MonadAff)
+import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign (F, Foreign)
 import Foreign as F
 import Foreign.Index as F.I
 import Global.Unsafe (unsafeStringify)
 import Handler (toErrResponse)
+import HttpSignature (SignatureParams, parseSignatureParams)
 import Server (Request, Response)
 import SQLite3 (DBConnection)
 
@@ -43,6 +50,7 @@ handler
   => Request
   -> m Response
 handler req = do
+  verifySignature req
   { contentType, msg, username } <- readParams req
   case contentType of
     Just ActivityJson ->
@@ -51,6 +59,76 @@ handler req = do
       handleActivityPost username msg
     Nothing ->
       throwUnsupportedMedia
+
+verifySignature
+  :: forall m
+   . MonadError Err m
+  => MonadThrow Err m
+  => MonadAff m
+  => Request
+  -> m Unit
+verifySignature req = do
+  authHeader <- readAuthHeader req.headers
+  params <- parseHttpSignature authHeader
+  publicKeyPem <- fetchPublicKey params.keyId
+  -- reconstruct the signature
+  throwError $ Err.unauthorized "Not authorized."
+
+fetchPublicKey
+  :: forall m
+   . MonadThrow Err m
+  => MonadAff m
+  => String
+  -> m String
+fetchPublicKey url = do
+  resBody <- getActorJson
+  case resBody of
+    Left _ ->
+      authErr
+    Right json ->
+      either (const authErr) pure (decodePubKeyPem json)
+  where getActorJson = liftAff $ map _.body $ AX.request requestConfig
+        requestConfig = AX.defaultRequest { headers = Array.cons acceptHeader AX.defaultRequest.headers
+                                          , responseFormat = ResponseFormat.json
+                                          , url = url
+                                          }
+        acceptHeader = RequestHeader.Accept (MediaType "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"")
+        authErr = throwError $ Err.unauthorized $ "Unable to retrieve key from keyId: " <> url
+        -- This isn't a nice way to write this but for some reason this doesn't compile: decodePubKeyPem2 = J.decodeJson >=> getField "publicKey" >=> getField "publicKeyPem" >=> J.decodeJson
+        decodePubKeyPem x = J.decodeJson x >>= (\o -> J.getField o "publicKey") >>= getField "publicKeyPem" >>= J.decodeJson
+        getField f = flip J.getField f
+
+parseHttpSignature
+  :: forall m
+   . MonadError Err m
+  => MonadThrow Err m
+  => String
+  -> m SignatureParams
+parseHttpSignature =
+  parseSignatureParams
+  >>> either authErr pure
+  where authErr err = throwUnauthorized "Could not parse Authorization header."
+
+readAuthHeader
+  :: forall m
+   . MonadError Err m
+  => MonadThrow Err m
+  => Foreign
+  -> m String
+readAuthHeader =
+  readHeader
+  >>> runExcept
+  >>> either (const authErr) pure
+  where readHeader = errorsAt "authorization" <<< F.readString <=< F.I.readProp "authorization"
+        authErr = throwUnauthorized "Missing Authorization header."
+
+throwUnauthorized
+  :: forall m a
+   . MonadError Err m
+  => MonadThrow Err m
+  => String
+  -> m a
+throwUnauthorized = throwError <<< Err.unauthorized
 
 type Params =
   { contentType :: Maybe ContentType

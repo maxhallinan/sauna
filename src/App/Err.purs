@@ -10,6 +10,7 @@ module App.Err
   , fieldErr
   , invalidData
   , notFound
+  , unauthorized
   , unknown
   , unsupportedMedia
   ) where
@@ -46,6 +47,7 @@ data ErrCode
   | DbErr
   | InvalidData (Array FieldErr)
   | NotFound
+  | Unauthorized
   | Unknown
   | UnsupportedMedia
 
@@ -58,6 +60,7 @@ toErrName Conflict = "CONFLICT"
 toErrName DbErr = "DB_ERROR"
 toErrName (InvalidData _) = "INVALID_DATA"
 toErrName NotFound = "NOT_FOUND"
+toErrName Unauthorized = "UNAUTHORIZED"
 toErrName Unknown = "UNKNOWN"
 toErrName UnsupportedMedia = "UNSUPPORTED_MEDIA"
 
@@ -106,6 +109,9 @@ invalidData fieldErrs = makeErr (InvalidData fieldErrs) Nothing
 
 notFound :: String -> Err
 notFound = err NotFound
+
+unauthorized :: String -> Err
+unauthorized = err Unauthorized
 
 unknown :: String -> Err
 unknown = err Unknown

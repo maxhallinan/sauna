@@ -5,7 +5,8 @@ You can edit this file as you like.
 { name =
     "my-project"
 , dependencies =
-    [ "argonaut"
+    [ "affjax"
+    , "argonaut"
     , "bifunctors"
     , "console"
     , "debug"
@@ -13,10 +14,12 @@ You can edit this file as you like.
     , "effect"
     , "foreign-object"
     , "makkori"
+    , "media-types"
     , "node-http"
     , "node-sqlite3"
     , "parsing"
     , "psci-support"
+    , "validation"
     ]
 , packages =
     ./packages.dhall

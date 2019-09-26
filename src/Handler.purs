@@ -52,6 +52,7 @@ toErrStatus :: Err -> Int
 toErrStatus (Err { code }) =
   case code of
        BadRequest -> 400
+       Unauthorized -> 401
        NotFound -> 404
        Conflict -> 409
        UnsupportedMedia -> 415
