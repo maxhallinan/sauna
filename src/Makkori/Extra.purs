@@ -4,6 +4,8 @@ module Makkori.Extra
   , get
   , getHeaders
   , getHostname
+  , getMethod
+  , getOriginalUrl
   , getQuery
   , makeAccepts
   , makeJsonMiddleware
@@ -28,6 +30,12 @@ getHeaders = EU.runEffectFn1 _getHeaders
 
 getHostname :: Request -> Effect String
 getHostname = EU.runEffectFn1 _getHostname
+
+getMethod :: Request -> String
+getMethod = _getMethod
+
+getOriginalUrl :: Request -> String
+getOriginalUrl = _getOriginalUrl
 
 getQuery :: Request -> Effect Foreign
 getQuery = EU.runEffectFn1 _getQuery
@@ -65,6 +73,8 @@ put = EU.runEffectFn3 _put
 foreign import data Router :: Type
 foreign import _getHeaders :: EU.EffectFn1 Request Foreign
 foreign import _getHostname :: EU.EffectFn1 Request String
+foreign import _getMethod :: Request -> String
+foreign import _getOriginalUrl :: Request -> String
 foreign import _getQuery :: EU.EffectFn1 Request Foreign
 foreign import _makeRouter :: Effect Router
 foreign import _makeAccepts :: (String -> Maybe String) -> Maybe String -> Request -> Array String -> Maybe String

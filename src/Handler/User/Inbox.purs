@@ -20,6 +20,7 @@ import Data.Array as Array
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..))
 import Data.MediaType (MediaType(..))
+import Data.Traversable (traverse)
 import Db.Account (getAccountByUsername)
 import Db.Activity (insertAccountActivity, insertActivity)
 import Effect.Aff (Aff)
@@ -29,7 +30,8 @@ import Foreign as F
 import Foreign.Index as F.I
 import Global.Unsafe (unsafeStringify)
 import Handler (toErrResponse)
-import HttpSignature (SignatureParams, parseSignatureParams)
+import HttpSignature (SignatureParams)
+import HttpSignature as HS
 import Server (Request, Response)
 import SQLite3 (DBConnection)
 
@@ -70,9 +72,38 @@ verifySignature
 verifySignature req = do
   authHeader <- readAuthHeader req.headers
   params <- parseHttpSignature authHeader
+  stringToSign <- makeStringToSign params.headers req
   publicKeyPem <- fetchPublicKey params.keyId
   -- reconstruct the signature
   throwError $ Err.unauthorized "Not authorized."
+
+makeStringToSign
+  :: forall m
+   . MonadThrow Err m
+  => Maybe (Array String)
+  -> Request
+  -> m String
+makeStringToSign headersInSignature req =
+  case headersInSignature of
+    Nothing ->
+      let
+        dateHeader = map pure $ readReqHeader req.headers "date"
+      in
+      either dateErr makeString (runExcept dateHeader)
+    Just inSignature ->
+      let
+        pairs = traverse (readReqHeader req.headers) inSignature
+      in
+      either headersErr makeString (runExcept pairs)
+  where dateErr _ = throwError $ Err.unauthorized "The request is missing a Date header."
+        headersErr _ = throwError $ Err.unauthorized "The request is missing headers specified in the signature's header list."
+        reqPieces = { reqMethod: req.method, reqUrl: req.originalUrl }
+        makeString = pure <<< HS.makeStringToSign reqPieces
+
+readReqHeader :: Foreign -> String -> F { k :: String, v :: String }
+readReqHeader f k = map makePair headerVal
+  where headerVal = errorsAt k $ F.I.readProp k f >>= F.readString
+        makePair v = { k, v }
 
 fetchPublicKey
   :: forall m
@@ -105,7 +136,7 @@ parseHttpSignature
   => String
   -> m SignatureParams
 parseHttpSignature =
-  parseSignatureParams
+  HS.parseSignatureParams
   >>> either authErr pure
   where authErr err = throwUnauthorized "Could not parse Authorization header."
 

@@ -1,4 +1,4 @@
-module Server.Core 
+module Server.Core
   ( Handler
   , Method(..)
   , Middleware
@@ -34,13 +34,15 @@ newtype Port = Port Int
 port :: Int -> Port
 port = Port
 
-type Request = 
+type Request =
   { accepts :: Array String -> Maybe String
   , body :: Foreign
   , headers :: Foreign
   , hostname :: String
+  , method :: String
   , params :: Foreign
-  , query :: Foreign 
+  , originalUrl :: String
+  , query :: Foreign
   }
 
 type Response = { body :: String, headers :: Array (Tuple String String), status :: Int }

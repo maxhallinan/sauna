@@ -2,6 +2,7 @@ module HttpSignature
   ( Param(..)
   , ParseError(..)
   , SignatureParams
+  , makeStringToSign
   , parseSignatureParams
   ) where
 
@@ -10,6 +11,7 @@ import Prelude
 import Data.Array (some)
 import Data.Bifunctor (lmap)
 import Data.Either (Either)
+import Data.Foldable (intercalate)
 import Data.Map (Map)
 import Data.Map as M
 import Data.Maybe (Maybe, maybe)
@@ -47,6 +49,14 @@ parseSignatureParams = runParser >=> validateSignatureParams
   where runParser =
           flip P.runParser signatureParser
           >>> lmap (pure <<< InvalidSyntax)
+
+makeStringToSign :: { reqMethod :: String, reqUrl :: String } -> Array { k :: String, v :: String } -> String
+makeStringToSign reqPieces = intercalate "\n" <<< map (makeLine reqPieces)
+  where makeLine { reqMethod, reqUrl } { k, v } =
+          if k == "(request-target)"
+          then format k (reqMethod <> " " <> reqUrl)
+          else format k v
+        format k v = k <> ": " <> v
 
 validateSignatureParams :: Map String String -> Either (Array ParseError) SignatureParams
 validateSignatureParams fields = V.toEither (makeParams <$> validateKeyId fields <*> validateSignature fields)

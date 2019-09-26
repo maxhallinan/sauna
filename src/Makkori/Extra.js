@@ -8,6 +8,17 @@ exports._getHostname = function (req) {
   return req.hostname;
 };
 
+exports._getMethod = function (req) {
+  const method = req.method && typeof req.method === 'string'
+    ? req.method.toLowerCase()
+    : "";
+  return method;
+};
+
+exports._getOriginalUrl = function (req) {
+  return req.originalUrl;
+};
+
 exports._getQuery = function (req) {
   return req.query;
 };
