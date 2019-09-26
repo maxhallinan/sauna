@@ -8,6 +8,7 @@ import Crypto.Internal
   , generateRSAKeypair
   , makePrivateKey
   , makePublicKey
+  , rsaVerify
   , unPrivateKey
   , unPublicKey
   )

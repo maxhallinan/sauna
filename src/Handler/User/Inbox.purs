@@ -15,6 +15,8 @@ import Control.Monad.Except (runExcept, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
 import Core.ActivityPub (Activity(..), ActivityType, toActivityType)
+import Crypto (PublicKey)
+import Crypto as Crypto
 import Data.Argonaut as J
 import Data.Array as Array
 import Data.Either (Either(..), either)
@@ -52,7 +54,7 @@ handler
   => Request
   -> m Response
 handler req = do
-  verifySignature req
+  checkAuthorization req
   { contentType, msg, username } <- readParams req
   case contentType of
     Just ActivityJson ->
@@ -62,28 +64,37 @@ handler req = do
     Nothing ->
       throwUnsupportedMedia
 
-verifySignature
+checkAuthorization
   :: forall m
    . MonadError Err m
   => MonadThrow Err m
   => MonadAff m
   => Request
   -> m Unit
-verifySignature req = do
+checkAuthorization req = do
   authHeader <- readAuthHeader req.headers
   params <- parseHttpSignature authHeader
-  stringToSign <- makeStringToSign params.headers req
-  publicKeyPem <- fetchPublicKey params.keyId
-  -- reconstruct the signature
-  throwError $ Err.unauthorized "Not authorized."
+  comparisonString <- makeComparisonString params.headers req
+  publicKey <- fetchPublicKey params.keyId
+  verifySignature { comparisonString, publicKey, signature: params.signature }
 
-makeStringToSign
+verifySignature
+  :: forall m
+   . MonadThrow Err m
+  => { comparisonString :: String, publicKey :: PublicKey, signature :: String }
+  -> m Unit
+verifySignature { comparisonString, publicKey, signature } =
+  if Crypto.rsaVerify publicKey signature comparisonString
+  then pure unit
+  else throwError $ Err.unauthorized "Not authorized."
+
+makeComparisonString
   :: forall m
    . MonadThrow Err m
   => Maybe (Array String)
   -> Request
   -> m String
-makeStringToSign headersInSignature req =
+makeComparisonString headersInSignature req =
   case headersInSignature of
     Nothing ->
       let
@@ -110,14 +121,14 @@ fetchPublicKey
    . MonadThrow Err m
   => MonadAff m
   => String
-  -> m String
+  -> m PublicKey
 fetchPublicKey url = do
   resBody <- getActorJson
   case resBody of
     Left _ ->
       authErr
     Right json ->
-      either (const authErr) pure (decodePubKeyPem json)
+      either (const authErr) (pure <<< Crypto.makePublicKey) (decodePubKeyPem json)
   where getActorJson = liftAff $ map _.body $ AX.request requestConfig
         requestConfig = AX.defaultRequest { headers = Array.cons acceptHeader AX.defaultRequest.headers
                                           , responseFormat = ResponseFormat.json
