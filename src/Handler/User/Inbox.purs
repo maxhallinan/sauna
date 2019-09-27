@@ -28,7 +28,7 @@ import Db.Account (getAccountByUsername)
 import Db.Activity (insertAccountActivity, insertActivity)
 import Db.Actor (getActorByUri, insertActor)
 import Db.Following (insertFollowing)
-import Db.Follower (deleteFollower)
+import Db.Follower (deleteFollower, insertFollower)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign (F, Foreign)
@@ -302,6 +302,8 @@ handleActivityType account activity@(Activity { activityType }) =
   case activityType of
     Accept ->
       handleAccept account activity
+    Follow ->
+      handleFollow account activity
     Remove ->
       handleRemove account activity
     _ ->
@@ -324,6 +326,25 @@ handleAccept (Account account) (Activity activity) =
     Right uri -> do
       actor <- insertActor { uri }
       insertFollowing { accountId: account.id, actorId: actor.id }
+
+handleFollow 
+  :: forall env m
+   . Has DBConnection env
+  => MonadReader env m
+  => MonadError Err m
+  => MonadThrow Err m
+  => MonadAff m
+  => Account
+  -> Activity
+  -> m Unit
+handleFollow (Account account) (Activity activity) =
+  case decodeActorUri activity.activityBlob of
+    Left _ ->
+      pure unit
+    Right uri -> do
+      actor <- insertActor { uri }
+      insertFollower { accountId: account.id, actorId: actor.id }
+      -- sendAccept uri
 
 handleRemove
   :: forall env m

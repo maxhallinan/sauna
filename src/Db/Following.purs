@@ -8,8 +8,6 @@ import App.Err as Err
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Reader.Class (class MonadReader)
-import Core.Account (Account(..))
-import Crypto (PrivateKey, PublicKey, makePublicKey, unPrivateKey, unPublicKey)
 import Data.Either (either)
 import Data.Foldable (intercalate)
 import Data.Traversable (traverse)
@@ -88,23 +86,6 @@ insertFollowing { accountId, actorId } = do
     then void $ runQuery query params
     else pure unit
   where query = "INSERT INTO following (account_id, actor_id) VALUES (?, ?)"
-        params = [ F.unsafeToForeign accountId
-                 , F.unsafeToForeign actorId
-                 ]
-
-deleteFollower
-  :: forall env m
-   . Has DBConnection env
-  => MonadReader env m
-  => MonadAff m
-  => MonadError Err m
-  => MonadThrow Err m
-  => { accountId :: Int, actorId :: Int }
-  -> m Unit
-deleteFollower { accountId, actorId } = do
-  _ <- runQuery query params
-  pure unit
-  where query = "DELETE FROM followers WHERE followers.account_id = ? AND followers.actor_id = ?"
         params = [ F.unsafeToForeign accountId
                  , F.unsafeToForeign actorId
                  ]
