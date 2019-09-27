@@ -27,7 +27,7 @@ import Data.Maybe (Maybe(..))
 import Data.MediaType (MediaType(..))
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
-import Db.Account (getAccountByUsername)
+import Db.Account (getAccountByUsername, getAccountPrivKey)
 import Db.Activity (insertAccountActivity, insertActivity)
 import Db.Actor (getActorByUri, insertActor)
 import Db.Following (insertFollowing)
@@ -363,10 +363,11 @@ sendAcceptFollow
   -> { id :: Int, uri :: String }
   -> Activity
   -> m Unit
-sendAcceptFollow req account actor follow = do
+sendAcceptFollow req (Account account) actor follow = do
+  privateKey <- getAccountPrivKey { id: account.id }
   _ <- liftAff $ AX.request requestConfig
   pure unit
-  where acceptFollow = makeAcceptFollow req.hostname account follow
+  where acceptFollow = makeAcceptFollow req.hostname (Account account) follow
         requestConfig = AX.defaultRequest { content = Just $ RequestBody.Json acceptFollow
                                           , headers = Array.cons acceptHeader AX.defaultRequest.headers
                                           , method = Left Method.POST

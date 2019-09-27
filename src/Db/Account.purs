@@ -1,4 +1,8 @@
-module Db.Account (getAccountByUsername, insertAccount) where
+module Db.Account 
+  ( getAccountByUsername
+  , getAccountPrivKey
+  , insertAccount
+  ) where
 
 import Prelude
 
@@ -9,7 +13,7 @@ import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError
 import Control.Monad.Except (runExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
-import Crypto (PrivateKey, PublicKey, makePublicKey, unPrivateKey, unPublicKey)
+import Crypto (PrivateKey, PublicKey, makePrivateKey, makePublicKey, unPrivateKey, unPublicKey)
 import Data.Either (either)
 import Data.Foldable (intercalate)
 import Db.Core (asFirstRow, runQuery)
@@ -76,3 +80,30 @@ insertAccount a = do
                  , F.unsafeToForeign $ unPrivateKey a.privKey
                  , F.unsafeToForeign $ unPublicKey a.pubKey
                  ]
+
+getAccountPrivKey 
+  :: forall env m
+   . Has DBConnection env
+  => MonadReader env m
+  => MonadAff m
+  => MonadError Err m
+  => MonadThrow Err m
+  => { id :: Int }
+  -> m PrivateKey
+getAccountPrivKey { id } = do
+  rows <- runQuery query params
+  firstRow <- asFirstRow rows
+  if isUndefined firstRow
+  then throwNotFound
+  else do
+    let privateKey = readPrivateKey firstRow
+    either throwDbErr pure privateKey
+  where query = "SELECT privkey FROM accounts WHERE accounts.id = ?"
+        params = [ F.unsafeToForeign id
+                 ]
+        readPrivateKey = readPrivateKeyRow >>> runExcept
+        throwNotFound = throwError $ Err.notFound ("Account not found: " <> show id)
+        throwDbErr = throwError <<< Err.dbErr <<< intercalate " " <<< map show
+
+readPrivateKeyRow :: Foreign -> F PrivateKey
+readPrivateKeyRow = map makePrivateKey <<< F.readString <=< F.I.readProp "privkey"
