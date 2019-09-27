@@ -1,4 +1,4 @@
-module Handler.User.Inbox (handlePost) where
+module Handler.User.Inbox (formatDateHeader, handlePost) where
 
 import Prelude
 
@@ -21,10 +21,14 @@ import Crypto as Crypto
 import Data.Argonaut (class DecodeJson, Json)
 import Data.Argonaut as J
 import Data.Array as Array
+import Data.DateTime (DateTime)
 import Data.Either (Either(..), either)
+import Data.Formatter.DateTime as Formatter
 import Data.HTTP.Method as Method
-import Data.Maybe (Maybe(..))
+import Data.List as List
+import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType (MediaType(..))
+import Data.Nullable as Nullable
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 import Db.Account (getAccountByUsername, getAccountPrivKey)
@@ -34,6 +38,8 @@ import Db.Following (insertFollowing)
 import Db.Follower (deleteFollower, insertFollower)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff, liftAff)
+import Effect.Class (liftEffect)
+import Effect.Now (nowDateTime)
 import Foreign (F, Foreign)
 import Foreign as F
 import Foreign.Index as F.I
@@ -43,6 +49,7 @@ import Global.Unsafe (unsafeStringify)
 import Handler (toErrResponse)
 import HttpSignature (SignatureParams)
 import HttpSignature as HS
+import Node.URL as URL
 import Server (Request, Response)
 import SQLite3 (DBConnection)
 
@@ -365,6 +372,16 @@ sendAcceptFollow
   -> m Unit
 sendAcceptFollow req (Account account) actor follow = do
   privateKey <- getAccountPrivKey { id: account.id }
+  dateHeader <- liftEffect $ map formatDateHeader nowDateTime
+  let stringToSign = HS.makeStringToSign { reqMethod: req.method
+                                         , reqUrl: req.originalUrl
+                                         } 
+                                         [ {k: "(request-target)", v: requestTarget}
+                                         , {k: "Date", v: dateHeader}
+                                         ]
+  -- build string
+  -- sign string
+  -- send request using Node.HTTP because I can't set the header via Affjax
   _ <- liftAff $ AX.request requestConfig
   pure unit
   where acceptFollow = makeAcceptFollow req.hostname (Account account) follow
@@ -374,6 +391,27 @@ sendAcceptFollow req (Account account) actor follow = do
                                           , url = actor.uri
                                           }
         acceptHeader = RequestHeader.Accept (MediaType "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"")
+        getUriPath = maybe "/" identity <<< Nullable.toMaybe <<< _.path <<< URL.parse
+        actorUriPath = getUriPath actor.uri
+        requestTarget = "post " <> actorUriPath
+
+formatDateHeader :: DateTime -> String
+formatDateHeader = Formatter.format $ List.fromFoldable
+  [ Formatter.DayOfWeekNameShort
+  , Formatter.Placeholder ", "
+  , Formatter.DayOfMonthTwoDigits
+  , Formatter.Placeholder " "
+  , Formatter.MonthShort
+  , Formatter.Placeholder " "
+  , Formatter.YearFull
+  , Formatter.Placeholder " "
+  , Formatter.Hours24
+  , Formatter.Placeholder ":"
+  , Formatter.MinutesTwoDigits
+  , Formatter.Placeholder ":"
+  , Formatter.SecondsTwoDigits
+  , Formatter.Placeholder " GMT"
+  ]
 
 makeAcceptFollow :: String -> Account -> Activity -> Json
 makeAcceptFollow hostname (Account account) (Activity activity) = J.fromObject $ O.fromFoldable
