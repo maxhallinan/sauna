@@ -17,6 +17,7 @@ import Core.Account (Account(..))
 import Core.ActivityPub (Activity(..), ActivityType, toActivityType)
 import Crypto (PublicKey)
 import Crypto as Crypto
+import Data.Argonaut (class DecodeJson, Json)
 import Data.Argonaut as J
 import Data.Array as Array
 import Data.Either (Either(..), either)
@@ -30,6 +31,7 @@ import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign (F, Foreign)
 import Foreign as F
 import Foreign.Index as F.I
+import Foreign.Object (Object)
 import Global.Unsafe (unsafeStringify)
 import Handler (toErrResponse)
 import HttpSignature (SignatureParams)
@@ -136,9 +138,10 @@ fetchPublicKey url = do
                                           }
         acceptHeader = RequestHeader.Accept (MediaType "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"")
         authErr = throwError $ Err.unauthorized $ "Unable to retrieve key from keyId: " <> url
-        -- This isn't a nice way to write this but for some reason this doesn't compile: decodePubKeyPem2 = J.decodeJson >=> getField "publicKey" >=> getField "publicKeyPem" >=> J.decodeJson
-        decodePubKeyPem x = J.decodeJson x >>= (\o -> J.getField o "publicKey") >>= getField "publicKeyPem" >>= J.decodeJson
-        getField f = flip J.getField f
+        decodePubKeyPem = J.decodeJson >=> getField "publicKey" >=> getField "publicKeyPem" >=> J.decodeJson
+
+getField :: forall a. DecodeJson a => String -> Object Json -> Either String a
+getField = flip J.getField
 
 parseHttpSignature
   :: forall m
