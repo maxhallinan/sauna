@@ -13,6 +13,7 @@ You can edit this file as you like.
     , "dotenv"
     , "effect"
     , "foreign-object"
+    , "http-methods"
     , "makkori"
     , "media-types"
     , "node-http"

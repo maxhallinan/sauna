@@ -4,6 +4,7 @@ import Prelude
 
 import Affjax as AX
 import Affjax.ResponseFormat as ResponseFormat
+import Affjax.RequestBody as RequestBody
 import Affjax.RequestHeader as RequestHeader
 import App (runApp)
 import App.Env (Env, class Has)
@@ -21,9 +22,11 @@ import Data.Argonaut (class DecodeJson, Json)
 import Data.Argonaut as J
 import Data.Array as Array
 import Data.Either (Either(..), either)
+import Data.HTTP.Method as Method
 import Data.Maybe (Maybe(..))
 import Data.MediaType (MediaType(..))
 import Data.Traversable (traverse)
+import Data.Tuple (Tuple(..))
 import Db.Account (getAccountByUsername)
 import Db.Activity (insertAccountActivity, insertActivity)
 import Db.Actor (getActorByUri, insertActor)
@@ -35,6 +38,7 @@ import Foreign (F, Foreign)
 import Foreign as F
 import Foreign.Index as F.I
 import Foreign.Object (Object)
+import Foreign.Object as O
 import Global.Unsafe (unsafeStringify)
 import Handler (toErrResponse)
 import HttpSignature (SignatureParams)
@@ -63,9 +67,9 @@ handler req = do
   { contentType, msg, username } <- readParams req
   case contentType of
     Just ActivityJson ->
-      handleActivityPost username msg
+      handleActivityPost { msg, request: req, username }
     Just LdJson ->
-      handleActivityPost username msg
+      handleActivityPost { msg, request: req, username }
     Nothing ->
       throwUnsupportedMedia
 
@@ -273,10 +277,9 @@ handleActivityPost
   => MonadError Err m
   => MonadThrow Err m
   => MonadAff m
-  => String
-  -> Msg
+  => { msg :: Msg, request :: Request, username :: String }
   -> m Response
-handleActivityPost username msg = do
+handleActivityPost { msg, request, username } = do
   (Account account) <- getAccountByUsername username
   (Activity activity) <- insertActivity { activityBlob: msg.activityBlob
                                         , activityId: msg.activityId
@@ -285,7 +288,7 @@ handleActivityPost username msg = do
   insertAccountActivity { accountId: account.id
                         , activityId: activity.id
                         }
-  handleActivityType (Account account) (Activity activity)
+  handleActivityType request (Account account) (Activity activity)
   pure $ makeResponse
 
 handleActivityType
@@ -295,15 +298,16 @@ handleActivityType
   => MonadError Err m
   => MonadThrow Err m
   => MonadAff m
-  => Account
+  => Request
+  -> Account
   -> Activity
   -> m Unit
-handleActivityType account activity@(Activity { activityType }) =
+handleActivityType req account activity@(Activity { activityType }) =
   case activityType of
     Accept ->
       handleAccept account activity
     Follow ->
-      handleFollow account activity
+      handleFollow req account activity
     Remove ->
       handleRemove account activity
     _ ->
@@ -327,24 +331,56 @@ handleAccept (Account account) (Activity activity) =
       actor <- insertActor { uri }
       insertFollowing { accountId: account.id, actorId: actor.id }
 
-handleFollow 
+handleFollow
   :: forall env m
    . Has DBConnection env
   => MonadReader env m
   => MonadError Err m
   => MonadThrow Err m
   => MonadAff m
-  => Account
+  => Request
+  -> Account
   -> Activity
   -> m Unit
-handleFollow (Account account) (Activity activity) =
+handleFollow req (Account account) (Activity activity) =
   case decodeActorUri activity.activityBlob of
     Left _ ->
       pure unit
     Right uri -> do
       actor <- insertActor { uri }
       insertFollower { accountId: account.id, actorId: actor.id }
-      -- sendAccept uri
+      sendAcceptFollow req (Account account) actor (Activity activity)
+
+sendAcceptFollow
+  :: forall env m
+   . Has DBConnection env
+  => MonadReader env m
+  => MonadError Err m
+  => MonadThrow Err m
+  => MonadAff m
+  => Request
+  -> Account
+  -> { id :: Int, uri :: String }
+  -> Activity
+  -> m Unit
+sendAcceptFollow req account actor follow = do
+  _ <- liftAff $ AX.request requestConfig
+  pure unit
+  where acceptFollow = makeAcceptFollow req.hostname account follow
+        requestConfig = AX.defaultRequest { content = Just $ RequestBody.Json acceptFollow
+                                          , headers = Array.cons acceptHeader AX.defaultRequest.headers
+                                          , method = Left Method.POST
+                                          , url = actor.uri
+                                          }
+        acceptHeader = RequestHeader.Accept (MediaType "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"")
+
+makeAcceptFollow :: String -> Account -> Activity -> Json
+makeAcceptFollow hostname (Account account) (Activity activity) = J.fromObject $ O.fromFoldable
+  [ Tuple "@context" $ J.fromString "https://www.w3.org/ns/activitystreams"
+  , Tuple "actor" $ J.fromString $ "https://" <> hostname <> "/users/" <> account.username
+  , Tuple "type" $ J.fromString "Accept"
+  , Tuple "object" $ J.fromString activity.activityBlob
+  ]
 
 handleRemove
   :: forall env m

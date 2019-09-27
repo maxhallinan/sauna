@@ -28,14 +28,14 @@ instance encodeJsonPerson :: EncodeJson Person where
   encodeJson = encodePerson
 
 encodePerson :: Person -> Json
-encodePerson (Person actor) = A.fromObject $ O.fromFoldable
-  [ Tuple "@context" $ encodeJson actor.context
-  , Tuple "id" $ encodeJson actor.id
-  , Tuple "inbox" $ encodeJson actor.inbox
-  , Tuple "name" $ encodeJson actor.name
-  , Tuple "outbox" $ encodeJson actor.outbox
+encodePerson (Person p) = A.fromObject $ O.fromFoldable
+  [ Tuple "@context" $ encodeJson p.context
+  , Tuple "id" $ encodeJson p.id
+  , Tuple "inbox" $ encodeJson p.inbox
+  , Tuple "name" $ encodeJson p.name
+  , Tuple "outbox" $ encodeJson p.outbox
   , Tuple "type" $ encodeJson "Person"
-  , Tuple "publicKey" $ encodePublicKeyProp actor.publicKey
+  , Tuple "publicKey" $ encodePublicKeyProp p.publicKey
   ]
 
 type PublicKeyProp = { id :: String, owner :: String, publicKeyPem :: String }
