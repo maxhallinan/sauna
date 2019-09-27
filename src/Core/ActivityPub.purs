@@ -112,7 +112,8 @@ fromActivityType Reject = "Reject"
 fromActivityType Remove = "Remove"
 
 newtype Activity = Activity
-  { activityId :: String
+  { activityBlob :: String
+  , activityId :: String
   , activityType :: ActivityType
   , id :: Int
   }

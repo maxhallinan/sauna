@@ -26,12 +26,21 @@ readActivityRow :: Foreign -> F Activity
 readActivityRow f =
   makeActivity
   <$> readId f
+  <*> readActivityBlob f
   <*> readActivityId f
   <*> readActivityType f
-  where makeActivity id activityId activityType = Activity { id, activityId, activityType }
+  where makeActivity id activityBlob activityId activityType =
+          Activity { id
+                   , activityBlob
+                   , activityId
+                   , activityType
+                   }
 
 readId :: Foreign -> F Int
 readId = F.readInt <=< F.I.readProp "id"
+
+readActivityBlob :: Foreign -> F String
+readActivityBlob = F.readString <=< F.I.readProp "activity_blob"
 
 readActivityId :: Foreign -> F String
 readActivityId = F.readString <=< F.I.readProp "activity_id"

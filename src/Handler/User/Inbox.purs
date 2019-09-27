@@ -14,7 +14,7 @@ import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError
 import Control.Monad.Except (runExcept, withExcept)
 import Control.Monad.Reader.Class (class MonadReader)
 import Core.Account (Account(..))
-import Core.ActivityPub (Activity(..), ActivityType, toActivityType)
+import Core.ActivityPub (Activity(..), ActivityType(..), toActivityType)
 import Crypto (PublicKey)
 import Crypto as Crypto
 import Data.Argonaut (class DecodeJson, Json)
@@ -26,6 +26,9 @@ import Data.MediaType (MediaType(..))
 import Data.Traversable (traverse)
 import Db.Account (getAccountByUsername)
 import Db.Activity (insertAccountActivity, insertActivity)
+import Db.Actor (getActorByUri, insertActor)
+import Db.Following (insertFollowing)
+import Db.Follower (deleteFollower)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign (F, Foreign)
@@ -282,7 +285,78 @@ handleActivityPost username msg = do
   insertAccountActivity { accountId: account.id
                         , activityId: activity.id
                         }
+  handleActivityType (Account account) (Activity activity)
   pure $ makeResponse
+
+handleActivityType
+  :: forall env m
+   . Has DBConnection env
+  => MonadReader env m
+  => MonadError Err m
+  => MonadThrow Err m
+  => MonadAff m
+  => Account
+  -> Activity
+  -> m Unit
+handleActivityType account activity@(Activity { activityType }) =
+  case activityType of
+    Accept ->
+      handleAccept account activity
+    Remove ->
+      handleRemove account activity
+    _ ->
+      pure unit
+
+handleAccept
+  :: forall env m
+   . Has DBConnection env
+  => MonadReader env m
+  => MonadError Err m
+  => MonadThrow Err m
+  => MonadAff m
+  => Account
+  -> Activity
+  -> m Unit
+handleAccept (Account account) (Activity activity) =
+  case decodeActorUri activity.activityBlob of
+    Left _ ->
+      pure unit
+    Right uri -> do
+      actor <- insertActor { uri }
+      insertFollowing { accountId: account.id, actorId: actor.id }
+
+handleRemove
+  :: forall env m
+   . Has DBConnection env
+  => MonadReader env m
+  => MonadError Err m
+  => MonadThrow Err m
+  => MonadAff m
+  => Account
+  -> Activity
+  -> m Unit
+handleRemove (Account account) (Activity activity) =
+  case decodeActorUri activity.activityBlob of
+    Left _ ->
+      pure unit
+    Right uri -> do
+      actor <- getActorByUri uri
+      deleteFollower { accountId: account.id, actorId: actor.id }
+
+decodeActorUri :: String -> Either String String
+decodeActorUri = J.jsonParser >=> J.decodeJson >=> getField "actor" >=> decodeActorField
+  where decodeActorField :: Json -> Either String String
+        decodeActorField =
+          J.caseJson
+            toLeft -- unit
+            toLeft -- boolean
+            toLeft -- number
+            Right  -- string
+            toLeft -- array
+            (getField "id" >=> J.decodeJson) -- object
+
+        toLeft :: forall a. a -> Either String String
+        toLeft _ = Left "Actor field was not a String or an Object."
 
 makeResponse :: Response
 makeResponse =
