@@ -23,6 +23,7 @@ You can edit this file as you like.
     , "node-url"
     , "now"
     , "nullable"
+    , "options"
     , "parsing"
     , "psci-support"
     , "validation"

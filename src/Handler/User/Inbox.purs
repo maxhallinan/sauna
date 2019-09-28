@@ -4,7 +4,6 @@ import Prelude
 
 import Affjax as AX
 import Affjax.ResponseFormat as ResponseFormat
-import Affjax.RequestBody as RequestBody
 import Affjax.RequestHeader as RequestHeader
 import App (runApp)
 import App.Env (Env, class Has)
@@ -24,11 +23,11 @@ import Data.Array as Array
 import Data.DateTime (DateTime)
 import Data.Either (Either(..), either)
 import Data.Formatter.DateTime as Formatter
-import Data.HTTP.Method as Method
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType (MediaType(..))
 import Data.Nullable as Nullable
+import Data.Options (Options, (:=))
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 import Db.Account (getAccountByUsername, getAccountPrivKey)
@@ -36,7 +35,7 @@ import Db.Activity (insertAccountActivity, insertActivity)
 import Db.Actor (getActorByUri, insertActor)
 import Db.Following (insertFollowing)
 import Db.Follower (deleteFollower, insertFollower)
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (liftEffect)
 import Effect.Now (nowDateTime)
@@ -49,6 +48,7 @@ import Global.Unsafe (unsafeStringify)
 import Handler (toErrResponse)
 import HttpSignature (SignatureParams)
 import HttpSignature as HS
+import Node.HTTP.Client as HTTP
 import Node.URL as URL
 import Server (Request, Response)
 import SQLite3 (DBConnection)
@@ -379,21 +379,37 @@ sendAcceptFollow req (Account account) actor follow = do
                                          [ {k: "(request-target)", v: requestTarget}
                                          , {k: "Date", v: dateHeader}
                                          ]
-  -- build string
-  -- sign string
-  -- send request using Node.HTTP because I can't set the header via Affjax
-  _ <- liftAff $ AX.request requestConfig
-  pure unit
+  let signature = Crypto.rsaSign privateKey stringToSign
+  let authHeader = "Signature keyId=\"" <> accountKeyUrl <> "\",algorithm=\"rsa-sha256\",headers=\"(request-target) date\",signature=\"" <> signature <> "\""
+  let headers = makeRequestHeaders authHeader dateHeader
+  let requestOptions = (makeRequestOptions headers) <$> (Nullable.toMaybe parsedActorUri.hostname) <*> (Nullable.toMaybe parsedActorUri.path)
+  case requestOptions of
+    Just opts -> do
+      _ <- liftAff $ sendRequest opts
+      pure unit
+    Nothing ->
+      pure unit
   where acceptFollow = makeAcceptFollow req.hostname (Account account) follow
-        requestConfig = AX.defaultRequest { content = Just $ RequestBody.Json acceptFollow
-                                          , headers = Array.cons acceptHeader AX.defaultRequest.headers
-                                          , method = Left Method.POST
-                                          , url = actor.uri
-                                          }
-        acceptHeader = RequestHeader.Accept (MediaType "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"")
-        getUriPath = maybe "/" identity <<< Nullable.toMaybe <<< _.path <<< URL.parse
-        actorUriPath = getUriPath actor.uri
+        parsedActorUri = URL.parse actor.uri
+        getActorPath = maybe "/" identity <<< Nullable.toMaybe <<< _.path
+        actorUriPath = getActorPath parsedActorUri
         requestTarget = "post " <> actorUriPath
+        accountKeyUrl = "https://" <> req.hostname <> "/users/" <> account.username <> "#main-key"
+        makeRequestHeaders authHeader dateHeader = HTTP.RequestHeaders $ O.fromFoldable [ Tuple "Authorization" authHeader
+                                                                                        , Tuple "Content-Type" "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\""
+                                                                                        , Tuple "Date"  dateHeader
+                                                                                        ]
+        makeRequestOptions headers hostname path =
+          HTTP.method := "POST"
+          <> HTTP.protocol := "https:"
+          <> HTTP.hostname := hostname
+          <> HTTP.path := path
+          <> HTTP.headers := headers
+
+sendRequest :: Options HTTP.RequestOptions -> Aff HTTP.Response
+sendRequest options = makeAff \cb -> do
+  _ <- HTTP.request options (void <<< cb <<< Right)
+  pure mempty
 
 formatDateHeader :: DateTime -> String
 formatDateHeader = Formatter.format $ List.fromFoldable

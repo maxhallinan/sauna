@@ -25,8 +25,11 @@ makePrivateKey = PrivateKey
 makePublicKey :: String -> PublicKey
 makePublicKey = PublicKey
 
+rsaSign :: PrivateKey -> String -> String
+rsaSign key x = Fn.runFn2 _rsaSign (unPrivateKey key) x
+
 rsaVerify :: PublicKey -> String -> String -> Boolean
-rsaVerify key signature x = Fn.runFn3 _rsaVerify key signature x
+rsaVerify key signature x = Fn.runFn3 _rsaVerify (unPublicKey key) signature x
 
 unPrivateKey :: PrivateKey -> String
 unPrivateKey = unwrap
@@ -35,4 +38,5 @@ unPublicKey :: PublicKey -> String
 unPublicKey = unwrap
 
 foreign import _generateRSAKeypair :: EU.EffectFn2 (String -> PrivateKey) (String -> PublicKey) Keypair
-foreign import _rsaVerify :: Fn.Fn3 PublicKey String String Boolean
+foreign import _rsaSign :: Fn.Fn2 String String String
+foreign import _rsaVerify :: Fn.Fn3 String String String Boolean

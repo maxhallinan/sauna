@@ -21,3 +21,10 @@ exports._rsaVerify = function (publicKey, signature, data) {
     return false;
   }
 };
+
+exports._rsaSign = function (privateKey, data) {
+  const sign = crypto.createSign('RSA-SHA256');
+  sign.update(data);
+  sign.end();
+  return sign.sign(privateKey, 'base64');
+};
