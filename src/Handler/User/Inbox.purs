@@ -3,8 +3,8 @@ module Handler.User.Inbox (formatDateHeader, handlePost) where
 import Prelude
 
 import Affjax as AX
-import Affjax.ResponseFormat as ResponseFormat
 import Affjax.RequestHeader as RequestHeader
+import Affjax.ResponseFormat as ResponseFormat
 import App (runApp)
 import App.Env (Env, class Has)
 import App.Err (Err)
@@ -33,8 +33,8 @@ import Data.Tuple (Tuple(..))
 import Db.Account (getAccountByUsername, getAccountPrivKey)
 import Db.Activity (insertAccountActivity, insertActivity)
 import Db.Actor (getActorByUri, insertActor)
-import Db.Following (insertFollowing)
 import Db.Follower (deleteFollower, insertFollower)
+import Db.Following (insertFollowing)
 import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (liftEffect)
@@ -50,8 +50,8 @@ import HttpSignature (SignatureParams)
 import HttpSignature as HS
 import Node.HTTP.Client as HTTP
 import Node.URL as URL
-import Server (Request, Response)
 import SQLite3 (DBConnection)
+import Server (Request, Response)
 
 handlePost :: Env -> Request -> Aff Response
 handlePost env =
@@ -375,7 +375,7 @@ sendAcceptFollow req (Account account) actor follow = do
   dateHeader <- liftEffect $ map formatDateHeader nowDateTime
   let stringToSign = HS.makeStringToSign { reqMethod: req.method
                                          , reqUrl: req.originalUrl
-                                         } 
+                                         }
                                          [ {k: "(request-target)", v: requestTarget}
                                          , {k: "Date", v: dateHeader}
                                          ]

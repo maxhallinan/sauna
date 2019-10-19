@@ -1,4 +1,4 @@
-module App.Env 
+module App.Env
   ( class Has
   , Env(..)
   , grab
@@ -8,11 +8,11 @@ module App.Env
 import Prelude
 
 import Control.Monad.Reader (class MonadReader, ask)
-import Server (Port)
 import SQLite3 (DBConnection)
+import Server (Port)
 
-newtype Env = 
-  Env { dbConn :: DBConnection 
+newtype Env =
+  Env { dbConn :: DBConnection
       , port :: Port
       }
 
@@ -26,4 +26,4 @@ instance hasPort :: Has Port Env where
   obtain (Env { port }) = port
 
 grab :: forall field env m. MonadReader env m => Has field env => m field
-grab = map obtain ask 
+grab = map obtain ask

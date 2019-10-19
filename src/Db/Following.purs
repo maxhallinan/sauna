@@ -18,7 +18,11 @@ import Foreign as F
 import Foreign.Index as F.I
 import SQLite3 (DBConnection)
 
-type Following = { id :: Int, accountId :: Int, actorId :: Int }
+type Following =
+  { id :: Int
+  , accountId :: Int
+  , actorId :: Int
+  }
 
 readCollection :: Foreign -> F (Array Following)
 readCollection = F.readArray >=> traverse readRow

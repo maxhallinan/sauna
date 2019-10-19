@@ -5,11 +5,11 @@ import Prelude
 import App.Env (Env)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
-import Server (Router, path, useSubRouter)
-import Server as S
 import Router.Account as Account
 import Router.User as User
 import Router.WebFinger as WebFinger
+import Server (Router, path, useSubRouter)
+import Server as S
 
 makeRouter :: Env -> Aff Router
 makeRouter env = liftEffect do

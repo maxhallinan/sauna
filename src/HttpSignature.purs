@@ -15,9 +15,9 @@ import Data.Foldable (intercalate)
 import Data.Map (Map)
 import Data.Map as M
 import Data.Maybe (Maybe, maybe)
+import Data.String.CodeUnits (fromCharArray)
 import Data.String.Common (split)
 import Data.String.Pattern (Pattern(..))
-import Data.String.CodeUnits (fromCharArray)
 import Data.Tuple (Tuple(..))
 import Data.Validation.Semigroup (V)
 import Data.Validation.Semigroup as V
@@ -51,7 +51,7 @@ parseSignatureParams = runParser >=> validateSignatureParams
           >>> lmap (pure <<< InvalidSyntax)
 
 makeStringToSign :: { reqMethod :: String, reqUrl :: String } -> Array { k :: String, v :: String } -> String
-makeStringToSign reqPieces = intercalate "\n" <<< map (makeLine reqPieces)
+makeStringToSign reqPieces = intercalate "\\n" <<< map (makeLine reqPieces)
   where makeLine { reqMethod, reqUrl } { k, v } =
           if k == "(request-target)"
           then format k (reqMethod <> " " <> reqUrl)

@@ -1,4 +1,4 @@
-module ContentType 
+module ContentType
   ( module ContentType.Internal
   ) where
 

@@ -2,9 +2,9 @@ module Db.Core (asFirstRow, runQuery) where
 
 import Prelude
 
+import App.Env (class Has, grab)
 import App.Err (Err)
 import App.Err as Err
-import App.Env (class Has, grab)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Reader.Class (class MonadReader)
@@ -30,7 +30,7 @@ asFirstRow =
   F.I.readIndex 0
   >>> runExcept
   >>> either throwDbErr pure
-  where throwDbErr = 
+  where throwDbErr =
           const $ throwError $ Err.dbErr "Expected one row but got none."
 
 runQuery

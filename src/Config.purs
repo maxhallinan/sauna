@@ -14,9 +14,10 @@ type DbFilename = String
 
 type Port = Int
 
-type Config = { dbFilename :: DbFilename
-              , port :: Port
-              }
+type Config =
+  { dbFilename :: DbFilename
+  , port :: Port
+  }
 
 makeConfig :: DbFilename -> Port -> Config
 makeConfig dbFilename port = { dbFilename, port }
@@ -36,15 +37,15 @@ getPort :: Settings -> Aff Port
 getPort = getValue "PORT" readVal
   where readVal = Int.fromString
 
-getValue 
+getValue
   :: forall a
-   . Name 
-  -> (String -> Maybe a) 
-  -> Settings 
+   . Name
+  -> (String -> Maybe a)
+  -> Settings
   -> Aff a
-getValue name toValue = 
+getValue name toValue =
   maybe exception pure
-  <<< (toValue 
+  <<< (toValue
   <=< findSetting name)
   where exception = throwError $ error errMsg
         errMsg = makeErrMsg name
@@ -56,4 +57,4 @@ findSetting :: Name -> Settings -> Maybe String
 findSetting name = snd <=< find (isName name)
 
 isName :: Name -> Setting -> Boolean
-isName name = eq name <<< fst 
+isName name = eq name <<< fst

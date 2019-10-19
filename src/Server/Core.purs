@@ -11,9 +11,9 @@ module Server.Core
   , port
   ) where
 
-import Effect.Aff (Aff)
 import Data.Maybe (Maybe)
 import Data.Tuple (Tuple)
+import Effect.Aff (Aff)
 import Foreign (Foreign)
 import Makkori as Makkori
 import Makkori.Extra as Makkori.Extra
@@ -45,6 +45,10 @@ type Request =
   , query :: Foreign
   }
 
-type Response = { body :: String, headers :: Array (Tuple String String), status :: Int }
+type Response =
+  { body :: String
+  , headers :: Array (Tuple String String)
+  , status :: Int
+  }
 
 type Router = Makkori.Extra.Router

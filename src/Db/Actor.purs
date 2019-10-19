@@ -17,7 +17,7 @@ import Foreign as F
 import Foreign.Index as F.I
 import SQLite3 (DBConnection)
 
-getActorByUri 
+getActorByUri
   :: forall env m
    . Has DBConnection env
   => MonadReader env m
@@ -40,7 +40,7 @@ getActorByUri uri = do
         throwNotFound = throwError $ Err.notFound ("Actor not found: " <> uri)
         throwDbErr = throwError <<< Err.dbErr <<< intercalate " " <<< map show
 
-insertActor 
+insertActor
   :: forall env m
    . Has DBConnection env
   => MonadReader env m
@@ -58,7 +58,7 @@ insertActor { uri } = unlessActorExists do
         getActor :: m { id :: Int, uri :: String }
         getActor = getActorByUri uri
 
-        unlessActorExists :: m { id :: Int, uri :: String } -> m { id :: Int, uri :: String } 
+        unlessActorExists :: m { id :: Int, uri :: String } -> m { id :: Int, uri :: String }
         unlessActorExists action = catchError getActor (const action)
 
 readActorRow :: Foreign -> F { id :: Int, uri :: String }

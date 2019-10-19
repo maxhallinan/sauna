@@ -56,7 +56,12 @@ data LinkType = ActivityJson
 toMediaType :: LinkType -> String
 toMediaType ActivityJson = "application/activity+json"
 
-type Uri = { host :: String, name :: String, raw :: String, scheme :: UriScheme }
+type Uri =
+  { host :: String
+  , name :: String
+  , raw :: String
+  , scheme :: UriScheme
+  }
 
 data UriScheme = Acct | Http | Https
 

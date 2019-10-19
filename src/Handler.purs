@@ -11,8 +11,8 @@ import Prelude
 import App (App, runApp)
 import App.Env (Env)
 import App.Err (Err(..), ErrCode(..))
-import Control.Monad.Except (Except, runExcept)
 import Control.Monad.Error.Class (throwError)
+import Control.Monad.Except (Except, runExcept)
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Argonaut as A
 import Data.Either (either)

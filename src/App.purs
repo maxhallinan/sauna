@@ -8,14 +8,14 @@ import Prelude
 
 import App.Env (Env)
 import App.Err (Err)
-import Control.Monad.Except.Trans (ExceptT, runExceptT)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
+import Control.Monad.Except.Trans (ExceptT, runExceptT)
 import Control.Monad.Reader.Class (class MonadAsk, class MonadReader)
 import Control.Monad.Reader.Trans (ReaderT, runReaderT)
 import Data.Either (Either)
-import Effect.Class (class MonadEffect)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
+import Effect.Class (class MonadEffect)
 
 type App a = AppT Err Env Aff a
 

@@ -1,4 +1,4 @@
-module Db.Account 
+module Db.Account
   ( getAccountByUsername
   , getAccountPrivKey
   , insertAccount
@@ -81,7 +81,7 @@ insertAccount a = do
                  , F.unsafeToForeign $ unPublicKey a.pubKey
                  ]
 
-getAccountPrivKey 
+getAccountPrivKey
   :: forall env m
    . Has DBConnection env
   => MonadReader env m

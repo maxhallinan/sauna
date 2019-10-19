@@ -23,8 +23,8 @@ import Foreign (F, Foreign)
 import Foreign as F
 import Foreign.Index as F.I
 import Handler (toErrResponse)
-import Server (Request, Response)
 import SQLite3 (DBConnection)
+import Server (Request, Response)
 
 handleGet :: Env -> Request -> Aff Response
 handleGet env =
@@ -58,7 +58,9 @@ handler req = do
   where contentType = accepts [ ActivityJson, Html, LdJson, Wildcard ]
         accepts = toContentType <=< req.accepts <<< map fromContentType
 
-type Params = { username :: String }
+type Params =
+  { username :: String
+  }
 
 readParams
   :: forall m

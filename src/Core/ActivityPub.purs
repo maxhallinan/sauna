@@ -38,7 +38,11 @@ encodePerson (Person p) = A.fromObject $ O.fromFoldable
   , Tuple "publicKey" $ encodePublicKeyProp p.publicKey
   ]
 
-type PublicKeyProp = { id :: String, owner :: String, publicKeyPem :: String }
+type PublicKeyProp =
+  { id :: String
+  , owner :: String
+  , publicKeyPem :: String
+  }
 
 encodePublicKeyProp :: PublicKeyProp -> Json
 encodePublicKeyProp { id, owner, publicKeyPem } = A.fromObject $ O.fromFoldable

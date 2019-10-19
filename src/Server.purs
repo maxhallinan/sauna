@@ -8,8 +8,8 @@ module Server
 import Prelude
 
 import Effect (Effect)
-import Effect.Class (liftEffect)
 import Effect.Aff (Aff)
+import Effect.Class (liftEffect)
 import Makkori (listen, makeApp)
 import Makkori as M
 import Makkori.Extra (useRouter)

@@ -1,4 +1,4 @@
-module Handler.Account 
+module Handler.Account
   ( module Handler.Account.Get
   , module Handler.Account.Post
   ) where

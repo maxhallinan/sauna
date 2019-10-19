@@ -22,8 +22,8 @@ import Foreign (Foreign)
 import Foreign as F
 import Foreign.Index as F.I
 import Handler (toErrResponse)
-import Server (Request, Response)
 import SQLite3 (DBConnection)
+import Server (Request, Response)
 
 handleGet :: Env -> Request -> Aff Response
 handleGet env =
@@ -57,7 +57,9 @@ handler req = do
     then getAccountJrd uri
     else throwNotFound rawUri
 
-type Params = { rawUri :: String }
+type Params =
+  { rawUri :: String
+  }
 
 readParams
   :: forall m
@@ -88,7 +90,7 @@ parseResource
   => MonadThrow Err m
   => String
   -> m Uri
-parseResource rawUri = 
+parseResource rawUri =
   either (const $ throwNotFound rawUri) pure (parseUri rawUri)
 
 getAccountJrd

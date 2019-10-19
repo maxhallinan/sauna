@@ -17,8 +17,8 @@ import Foreign (Foreign)
 import Foreign as F
 import Foreign.Index as F.I
 import Handler (class Input, runJsonHandler)
-import Server (Request, Response)
 import SQLite3 (DBConnection)
+import Server (Request, Response)
 
 newtype Params = Params { username :: String }
 derive instance newtypeParams :: Newtype Params _

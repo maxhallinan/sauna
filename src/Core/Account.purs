@@ -11,7 +11,7 @@ import Foreign.Object as O
 
 newtype Account = Account AccountFields
 
-type AccountFields = 
+type AccountFields =
   { id :: Int
   , pubKey :: PublicKey
   , username :: String

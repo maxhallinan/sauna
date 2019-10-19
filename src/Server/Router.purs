@@ -7,14 +7,14 @@ module Server.Router
 
 import Prelude
 
-import Effect (Effect)
-import Effect.Class (liftEffect)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
-import Server.Core (Handler, Method(..), Middleware, Path, Request, Response, Router)
+import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
+import Effect.Class (liftEffect)
 import Makkori as M
 import Makkori.Extra as M.E
+import Server.Core (Handler, Method(..), Middleware, Path, Request, Response, Router)
 
 makeRouter :: Effect Router
 makeRouter = M.E.makeRouter
