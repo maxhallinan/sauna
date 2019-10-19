@@ -1,3 +1,6 @@
 DROP TABLE IF EXISTS accounts;
 DROP TABLE IF EXISTS activities;
 DROP TABLE IF EXISTS account_activities;
+DROP TABLE IF EXISTS actors;
+DROP TABLE IF EXISTS followers;
+DROP TABLE IF EXISTS following;
