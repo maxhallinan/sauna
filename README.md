@@ -1,6 +1,6 @@
 # sauna
 
-This is an implementation of an ActivityPub inbox.
+This is a toy ActivityPub inbox.
 The goals for this project were to understand the ActivityPub spec and to get a
 feel for writing a web server in PureScript.
 
