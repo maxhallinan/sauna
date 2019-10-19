@@ -27,7 +27,7 @@ Accepts: application/activity+json
 The Actor is discoverable via the webfinger endpoint. 
 
 ```
-GET /.well-known/webfinger?resource=acct:username@domain`
+GET /.well-known/webfinger?resource=acct:username@domain
 Accepts: application/activity+json
 ```
 
